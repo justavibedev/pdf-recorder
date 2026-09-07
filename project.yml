@@ -1,5 +1,7 @@
 name: PDFRecorder
 options:
+  projectFormat: xcode15_0
+  xcodeVersion: "15.0"
   bundleIdPrefix: org.pdfrecorder
   deploymentTarget:
     macOS: "14.0"
@@ -22,6 +24,7 @@ targets:
   PDFRecorder:
     type: application
     platform: macOS
+    productName: PDF Recorder
     sources:
       - Sources/PDFRecorderApp
       - path: THIRD_PARTY_NOTICES.md

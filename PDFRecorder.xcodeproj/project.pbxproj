@@ -3,7 +3,7 @@
 	archiveVersion = 1;
 	classes = {
 	};
-	objectVersion = 77;
+	objectVersion = 60;
 	objects = {
 
 /* Begin PBXBuildFile section */
@@ -60,7 +60,7 @@
 		95E3B6F9B700648D8461C9CE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		99E665FF99543FF9E7E241BD /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		B6C87D9FBEA63C079FC1E3C1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
-		C1912FFCCF73916343D6B947 /* PDFRecorder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PDFRecorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		B9B1286CCCAD452044AE874A /* PDF Recorder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = "PDF Recorder.app"; sourceTree = BUILT_PRODUCTS_DIR; };
 		D4806B2338C0803B2990FD3A /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
 		DA24B2B859DA078ACD183984 /* PDFRecorder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PDFRecorder.entitlements; sourceTree = "<group>"; };
 		DE35BDCAD7A332A93E712CE2 /* VideoExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExporter.swift; sourceTree = "<group>"; };
@@ -106,7 +106,7 @@
 		830239BBD6C5B4D6FF4B6EF1 /* Products */ = {
 			isa = PBXGroup;
 			children = (
-				C1912FFCCF73916343D6B947 /* PDFRecorder.app */,
+				B9B1286CCCAD452044AE874A /* PDF Recorder.app */,
 				78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */,
 			);
 			name = Products;
@@ -150,7 +150,7 @@
 			packageProductDependencies = (
 			);
 			productName = PDFRecorder;
-			productReference = C1912FFCCF73916343D6B947 /* PDFRecorder.app */;
+			productReference = B9B1286CCCAD452044AE874A /* PDF Recorder.app */;
 			productType = "com.apple.product-type.application";
 		};
 		D3CC970F9812A21E5361297C /* PDFRecorderCore */ = {
@@ -177,7 +177,7 @@
 			isa = PBXProject;
 			attributes = {
 				BuildIndependentTargetsInParallel = YES;
-				LastUpgradeCheck = 1430;
+				LastUpgradeCheck = 1500;
 				TargetAttributes = {
 					6283F2A7F43E7ACCBE6C92A3 = {
 						ProvisioningStyle = Manual;
@@ -188,6 +188,7 @@
 				};
 			};
 			buildConfigurationList = B7D940F533F5B1CC4C11474B /* Build configuration list for PBXProject "PDFRecorder" */;
+			compatibilityVersion = "Xcode 15.0";
 			developmentRegion = en;
 			hasScannedForEncodings = 0;
 			knownRegions = (
@@ -196,7 +197,6 @@
 			);
 			mainGroup = 66BB4CF4A418D367CADE3B00;
 			minimizedProjectReferenceProxies = 1;
-			preferredProjectObjectVersion = 77;
 			productRefGroup = 830239BBD6C5B4D6FF4B6EF1 /* Products */;
 			projectDirPath = "";
 			projectRoot = "";
