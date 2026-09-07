@@ -50,11 +50,7 @@ struct ContentView: View {
     private var welcome: some View {
         VStack(spacing: 28) {
             Spacer()
-            ZStack(alignment: .bottomTrailing) {
-                RoundedRectangle(cornerRadius: 28).fill(accent.opacity(0.1)).frame(width: 128, height: 128)
-                Image(systemName: "doc.richtext").font(.system(size: 66, weight: .light)).foregroundStyle(accent).frame(width: 128, height: 128)
-                Image(systemName: "mic.circle.fill").font(.system(size: 43)).foregroundStyle(.white, accent).offset(x: 9, y: 6)
-            }
+            Button(action: model.openPanel) { RareFolder() }.buttonStyle(.plain).accessibilityLabel("Open a PDF or saved project")
             VStack(spacing: 12) {
                 Text("Your PDF. Your explanation.").font(.system(size: 34, weight: .semibold, design: .rounded))
                 Text("Record one page at a time. Keep the best takes.\nTurn your notes into a presentation worth sharing.")
@@ -266,7 +262,7 @@ struct ContentView: View {
                 Button("Refresh inputs", action: model.refreshInputs).font(.caption).buttonStyle(.link).disabled(model.mode != .idle)
                 Divider()
                 HStack { Text("Your presentation").font(.caption.weight(.medium)); Spacer(); Text(duration(model.totalDuration)).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
-                Button { model.play(all: true) } label: { Label("Preview All Pages", systemImage: "play.rectangle") }.frame(maxWidth: .infinity).disabled(model.mode != .idle || model.manifest?.selectedTakes.isEmpty != false)
+                RareStepPlayer(model: model)
             }.padding(16)
         }.background(Color(nsColor: .controlBackgroundColor))
     }

@@ -11,11 +11,15 @@
 		29DAFC7A9A0085CE06F875B0 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E665FF99543FF9E7E241BD /* Models.swift */; };
 		2F60CA1EDE6D3DB03CA04AF6 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4806B2338C0803B2990FD3A /* ProjectStore.swift */; };
 		3042631A10BE98E5E5C525AD /* MicrophoneRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 816305D049F58B4EF9097870 /* MicrophoneRecorder.swift */; };
+		32AD8B4622519684413CEFAB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 41B71397F74B4AA9B5017516 /* Assets.xcassets */; };
 		5605486737CF10426AB4A7E5 /* PDFRecorderCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */; };
 		61459CE168DD1C0B3C1682FF /* PDFCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */; };
+		6B8CCE55ADC2960DFAC03CE8 /* RareComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82973A801FEBFA3909169D91 /* RareComponents.swift */; };
 		79565C3FF529B9C84509107F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E3B6F9B700648D8461C9CE /* ContentView.swift */; };
 		7AE0B7DC6B1264AE758D3CFF /* PDFRecorderCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9BC24B6F8A576A43FEC128D6 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = 6D25165232D58181C22160D3 /* THIRD_PARTY_NOTICES.md */; };
 		9D9204C596A7D8619CF9F09F /* SceneRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */; };
+		A4A8937FB25A6FBE95306554 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = F1DC3A882786B88AF2D1ECF3 /* LICENSE */; };
 		DBB031F1CC5AE0B885BDCBDB /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796DAC5FEBC44BF536768740 /* AppModel.swift */; };
 		EF69E8362212D7D12AB22401 /* PDFRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0528E446E88A316E693B0863 /* PDFRecorderApp.swift */; };
 /* End PBXBuildFile section */
@@ -46,10 +50,13 @@
 
 /* Begin PBXFileReference section */
 		0528E446E88A316E693B0863 /* PDFRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFRecorderApp.swift; sourceTree = "<group>"; };
+		41B71397F74B4AA9B5017516 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRenderer.swift; sourceTree = "<group>"; };
+		6D25165232D58181C22160D3 /* THIRD_PARTY_NOTICES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = THIRD_PARTY_NOTICES.md; sourceTree = "<group>"; };
 		78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PDFRecorderCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		796DAC5FEBC44BF536768740 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
 		816305D049F58B4EF9097870 /* MicrophoneRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneRecorder.swift; sourceTree = "<group>"; };
+		82973A801FEBFA3909169D91 /* RareComponents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = RareComponents.swift; sourceTree = "<group>"; };
 		95E3B6F9B700648D8461C9CE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
 		99E665FF99543FF9E7E241BD /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
 		B6C87D9FBEA63C079FC1E3C1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
@@ -58,6 +65,7 @@
 		DA24B2B859DA078ACD183984 /* PDFRecorder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PDFRecorder.entitlements; sourceTree = "<group>"; };
 		DE35BDCAD7A332A93E712CE2 /* VideoExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExporter.swift; sourceTree = "<group>"; };
 		E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFCanvas.swift; sourceTree = "<group>"; };
+		F1DC3A882786B88AF2D1ECF3 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -87,6 +95,8 @@
 		66BB4CF4A418D367CADE3B00 = {
 			isa = PBXGroup;
 			children = (
+				F1DC3A882786B88AF2D1ECF3 /* LICENSE */,
+				6D25165232D58181C22160D3 /* THIRD_PARTY_NOTICES.md */,
 				BFD8C89EEE7685939BE484E5 /* PDFRecorderApp */,
 				608CEC2F416923CDDE7D916D /* PDFRecorderCore */,
 				830239BBD6C5B4D6FF4B6EF1 /* Products */,
@@ -106,12 +116,14 @@
 			isa = PBXGroup;
 			children = (
 				796DAC5FEBC44BF536768740 /* AppModel.swift */,
+				41B71397F74B4AA9B5017516 /* Assets.xcassets */,
 				95E3B6F9B700648D8461C9CE /* ContentView.swift */,
 				B6C87D9FBEA63C079FC1E3C1 /* Info.plist */,
 				816305D049F58B4EF9097870 /* MicrophoneRecorder.swift */,
 				E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */,
 				DA24B2B859DA078ACD183984 /* PDFRecorder.entitlements */,
 				0528E446E88A316E693B0863 /* PDFRecorderApp.swift */,
+				82973A801FEBFA3909169D91 /* RareComponents.swift */,
 			);
 			name = PDFRecorderApp;
 			path = Sources/PDFRecorderApp;
@@ -125,6 +137,7 @@
 			buildConfigurationList = 0CDCB8FE0985F4FD95163522 /* Build configuration list for PBXNativeTarget "PDFRecorder" */;
 			buildPhases = (
 				55440497446DD726B4B73D39 /* Sources */,
+				F9D2CC8D9B572E308D88CD99 /* Resources */,
 				50FC6ABABE13F01873008908 /* Frameworks */,
 				A3C669D18F961F37E9AB114D /* Embed Frameworks */,
 			);
@@ -194,6 +207,19 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		F9D2CC8D9B572E308D88CD99 /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				32AD8B4622519684413CEFAB /* Assets.xcassets in Resources */,
+				A4A8937FB25A6FBE95306554 /* LICENSE in Resources */,
+				9BC24B6F8A576A43FEC128D6 /* THIRD_PARTY_NOTICES.md in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		0D88B07FD990FC42FDB460D7 /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
@@ -215,6 +241,7 @@
 				3042631A10BE98E5E5C525AD /* MicrophoneRecorder.swift in Sources */,
 				61459CE168DD1C0B3C1682FF /* PDFCanvas.swift in Sources */,
 				EF69E8362212D7D12AB22401 /* PDFRecorderApp.swift in Sources */,
+				6B8CCE55ADC2960DFAC03CE8 /* RareComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};

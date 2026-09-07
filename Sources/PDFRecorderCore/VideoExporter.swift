@@ -14,6 +14,11 @@ public struct ExportItem {
 }
 
 public enum VideoExporter {
+    // AVFoundation explicitly supports cancelling an export from another thread.
+    private struct CancellationHandle: @unchecked Sendable {
+        let session: AVAssetExportSession
+        func cancel() { session.cancelExport() }
+    }
     /// Work is isolated on the caller's background task. At most one page bitmap and one video frame are retained.
     public static func export(pdfURL: URL, password: String?, items: [ExportItem], to destination: URL,
                               width: Int = 1920, height: Int = 1080,
@@ -116,7 +121,8 @@ public enum VideoExporter {
             }
         }
         defer { reporter.cancel() }
-        await withTaskCancellationHandler(operation: { await session.export() }, onCancel: { session.cancelExport() })
+        let cancellation = CancellationHandle(session: session)
+        await withTaskCancellationHandler(operation: { await session.export() }, onCancel: { cancellation.cancel() })
         try Task.checkCancellation()
         guard session.status == .completed else { throw RecorderError.message("Assembling MP4 failed: \(session.error?.localizedDescription ?? "Unknown export error")") }
         if FileManager.default.fileExists(atPath: destination.path) {

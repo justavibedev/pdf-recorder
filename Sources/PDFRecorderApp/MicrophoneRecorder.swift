@@ -1,7 +1,8 @@
 import AVFoundation
 import PDFRecorderCore
 
-final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate {
+// Capture state is confined to `queue`; onFailure is installed and invoked on the main queue.
+final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, @unchecked Sendable {
     struct Snapshot { var time = 0.0; var level = 0.0 }
     private let queue = DispatchQueue(label: "org.pdfrecorder.microphone", qos: .userInitiated)
     private var session: AVCaptureSession?
@@ -14,7 +15,9 @@ final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDe
     private var observers: [NSObjectProtocol] = []
     var onFailure: ((String) -> Void)?
 
-    static var devices: [AVCaptureDevice] { AVCaptureDevice.devices(for: .audio) }
+    static var devices: [AVCaptureDevice] {
+        AVCaptureDevice.DiscoverySession(deviceTypes: [.microphone, .external], mediaType: .audio, position: .unspecified).devices
+    }
     var snapshot: Snapshot { queue.sync { Snapshot(time: clock?.duration ?? 0, level: level) } }
 
     func start(deviceID: String?, url: URL) async throws {
@@ -42,6 +45,9 @@ final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDe
                     self.session = session
                     self.observers = [
                         NotificationCenter.default.addObserver(forName: .AVCaptureSessionRuntimeError, object: session, queue: nil) { [weak self] _ in
+                            self?.reportFailure("Microphone capture was interrupted. The readable part of this take will be saved.")
+                        },
+                        NotificationCenter.default.addObserver(forName: .AVCaptureSessionWasInterrupted, object: session, queue: nil) { [weak self] _ in
                             self?.reportFailure("Microphone capture was interrupted. The readable part of this take will be saved.")
                         },
                         NotificationCenter.default.addObserver(forName: .AVCaptureDeviceWasDisconnected, object: device, queue: nil) { [weak self] _ in

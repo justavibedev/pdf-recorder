@@ -14,7 +14,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     @Published var pageIndex = 0
     @Published var artwork: PageArtwork?
     @Published var scene = Scene()
-    @Published var mode = Mode.idle
+    @Published var mode = Mode.idle { didSet { updateTimer() } }
     @Published var tool = InkTool.pointer
     @Published var inkColor = "blue"
     @Published var time = 0.0
@@ -63,10 +63,14 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
             guard let self, self.mode == .recording || self.mode == .paused else { return }
             Task { await self.stopRecording(); self.errorMessage = message }
         }
+        discoverRecovery()
+    }
+    private func updateTimer() {
+        timer?.invalidate(); timer = nil
+        guard mode == .recording || mode == .playing else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
             Task { @MainActor in self?.tick() }
         }
-        discoverRecovery()
     }
     func refreshInputs() { inputs = MicrophoneRecorder.devices }
     func discoverRecovery() {
@@ -144,6 +148,9 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         panel.message = "Save a portable project containing your PDF and every take."
         guard panel.runModal() == .OK, let destination = panel.url, destination != root else { return }
         do {
+            guard !destination.standardizedFileURL.path.hasPrefix(root.standardizedFileURL.path + "/") else {
+                throw RecorderError.message("Choose a location outside the current project package.")
+            }
             let staged = destination.deletingLastPathComponent().appendingPathComponent(".pdfrecorder-save-\(UUID().uuidString)")
             defer { try? FileManager.default.removeItem(at: staged) }
             try FileManager.default.copyItem(at: root, to: staged)
@@ -187,11 +194,24 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     }
     func fit() { apply(.viewport(Viewport())) }
     func record() {
-        guard mode == .idle, let root = projectURL else { return }
+        guard mode == .idle, artwork != nil, let root = projectURL else { return }
         // Do not overwrite a pending recovery journal before the user can recover it.
         if FileManager.default.fileExists(atPath: root.appendingPathComponent("active-take.json").path) {
-            errorMessage = "An interrupted take is waiting for recovery. Reopen this project and recover it before starting a new take."
-            return
+            let alert = NSAlert(); alert.messageText = "An unfinished take is waiting"
+            alert.informativeText = "Recover it before starting a new take, or keep its files aside in this project for later inspection. Your completed takes are safe."
+            alert.addButton(withTitle: "Recover & Start New Take")
+            alert.addButton(withTitle: "Keep Aside & Start New Take")
+            alert.addButton(withTitle: "Cancel")
+            do {
+                switch alert.runModal() {
+                case .alertFirstButtonReturn:
+                    guard let manifest else { return }
+                    self.manifest = try ProjectStore.recover(at: root, manifest: manifest)
+                    selectedTakeID = page?.selectedTakeID
+                case .alertSecondButtonReturn: try ProjectStore.setAsideActiveTake(at: root)
+                default: return
+                }
+            } catch { errorMessage = error.localizedDescription; return }
         }
         mode = .starting
         let take = Take(initialViewport: scene.viewport)
@@ -212,6 +232,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         guard mode == .recording || mode == .paused else { return }
         if mode == .recording {
             apply(.pointer(nil)); microphone.setPaused(true); mode = .paused
+            time = microphone.snapshot.time; level = 0
         } else { microphone.setPaused(false); mode = .recording }
         do { try journal() } catch { errorMessage = error.localizedDescription; Task { await stopRecording() } }
     }
@@ -317,11 +338,12 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
             }
             let pdfURL = try ProjectStore.location(manifest.sourcePDF, in: root)
             let password = self.password
+            let progressObserver = self
             mode = .exporting; exportProgress = 0
             exportTask = Task { [weak self] in
                 let worker = Task.detached(priority: .userInitiated) {
                     try await VideoExporter.export(pdfURL: pdfURL, password: password, items: items, to: destination) { value in
-                        Task { @MainActor [weak self] in self?.exportProgress = value }
+                        Task { @MainActor in progressObserver.exportProgress = value }
                     }
                 }
                 do {

@@ -108,6 +108,7 @@ public enum ProjectStore {
         updated.pages[page].add(take)
         try save(updated, at: root)
         try? FileManager.default.removeItem(at: root.appendingPathComponent("active-take.json"))
+        try? FileManager.default.removeItem(at: location(take.eventsPath, in: root).deletingPathExtension().appendingPathExtension("ndjson"))
         return updated
     }
     @discardableResult public static func journal(_ active: ActiveTake, from eventIndex: Int = 0, at root: URL) throws -> Int {
@@ -146,5 +147,11 @@ public enum ProjectStore {
         active.take.recovered = true
         let events = active.events.filter { $0.time <= active.take.duration }
         return try commit(active.take, events: events, page: active.page, manifest: manifest, at: root)
+    }
+    /// Keep an unreadable/unfinished recording intact while allowing a fresh take.
+    public static func setAsideActiveTake(at root: URL) throws {
+        let source = root.appendingPathComponent("active-take.json")
+        let destination = root.appendingPathComponent("unfinished-\(UUID().uuidString).json")
+        try FileManager.default.moveItem(at: source, to: destination)
     }
 }

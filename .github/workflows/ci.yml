@@ -1,0 +1,27 @@
+name: macOS
+on:
+  push:
+    branches: [main]
+  pull_request:
+permissions:
+  contents: read
+jobs:
+  build-and-test:
+    runs-on: macos-14
+    timeout-minutes: 20
+    steps:
+      - uses: actions/checkout@v4
+      - name: Test timeline, projects, renderer and MP4 export
+        run: swift test
+      - name: Build universal app
+        run: ./scripts/build.sh
+      - name: Verify architectures and signature
+        run: |
+          lipo -archs 'build/PDF Recorder.app/Contents/MacOS/PDF Recorder'
+          codesign --verify --deep --strict 'build/PDF Recorder.app'
+      - name: Package app
+        run: ditto -c -k --sequesterRsrc --keepParent 'build/PDF Recorder.app' build/PDF-Recorder-macOS.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: PDF-Recorder-macOS
+          path: build/PDF-Recorder-macOS.zip

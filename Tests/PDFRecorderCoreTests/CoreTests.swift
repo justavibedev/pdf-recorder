@@ -119,7 +119,7 @@ final class CoreTests: XCTestCase {
             items.append(ExportItem(page: page, take: take, events: [.init(time: 0, action: .pointer(Point(0.3, 0.7)))], audioURL: audio))
         }
         let output = workspace.appendingPathComponent("result.mp4")
-        try await VideoExporter.export(pdfURL: pdf, password: nil, items: items, to: output, width: 640, height: 360, progress: { _ in })
+        try await VideoExporter.export(pdfURL: pdf, password: nil, items: items, to: output, progress: { _ in })
         let asset = AVURLAsset(url: output)
         let duration = try await asset.load(.duration)
         let video = try await asset.loadTracks(withMediaType: .video)
@@ -128,7 +128,35 @@ final class CoreTests: XCTestCase {
         XCTAssertEqual(video.count, 1); XCTAssertEqual(audio.count, 1)
         let generator = AVAssetImageGenerator(asset: asset)
         let result = try await generator.image(at: CMTime(seconds: 0.1, preferredTimescale: 600))
-        XCTAssertGreaterThan(result.image.width, 0)
+        XCTAssertEqual(result.image.width, 1920)
+        XCTAssertEqual(result.image.height, 1080)
+        let rate = try await video[0].load(.nominalFrameRate)
+        XCTAssertEqual(rate, 30, accuracy: 0.1)
+        let descriptions = try await audio[0].load(.formatDescriptions)
+        XCTAssertEqual(CMFormatDescriptionGetMediaSubType(descriptions[0]), kAudioFormatMPEG4AAC)
+        // Compare an exported frame to the same scene rendered directly; catches flipped buffers and missing pointer layers.
+        let referencePDF = fixturePDF()
+        let artwork = try PageArtwork(page: referencePDF.page(at: 0)!)
+        var scene = Scene(); scene.pointer = Point(0.3, 0.7)
+        let expected = SceneRenderer.image(artwork: artwork, scene: scene, size: CGSize(width: 1920, height: 1080))!
+        let actualPixels = pixels(result.image)
+        let expectedPixels = pixels(expected)
+        let meanError = zip(actualPixels, expectedPixels).reduce(0.0) { $0 + abs(Double($1.0) - Double($1.1)) } / Double(actualPixels.count)
+        XCTAssertLessThan(meanError, 8, "Export differs from the shared renderer")
+        func blueMask(_ values: [UInt8]) -> Set<Int> {
+            Set(stride(from: 0, to: values.count, by: 4).filter { values[$0] < 90 && values[$0 + 2] > 180 })
+        }
+        let expectedBlue = blueMask(expectedPixels), actualBlue = blueMask(actualPixels)
+        XCTAssertGreaterThan(expectedBlue.count, 50)
+        XCTAssertGreaterThan(Double(expectedBlue.intersection(actualBlue).count) / Double(expectedBlue.union(actualBlue).count), 0.85,
+                             "Exported content is shifted or flipped")
+        if let artifactPath = ProcessInfo.processInfo.environment["PDFRECORDER_TEST_ARTIFACTS"] {
+            let artifacts = URL(fileURLWithPath: artifactPath)
+            try FileManager.default.createDirectory(at: artifacts, withIntermediateDirectories: true)
+            try Data(contentsOf: output).write(to: artifacts.appendingPathComponent("export-smoke.mp4"))
+            try Data(contentsOf: pdf).write(to: artifacts.appendingPathComponent("geometry-fixture.pdf"))
+            try NSBitmapImageRep(cgImage: result.image).representation(using: .png, properties: [:])!.write(to: artifacts.appendingPathComponent("export-frame.png"))
+        }
     }
     func testCancelledExportPreservesExistingDestination() async throws {
         let workspace = try scratch(); defer { try? FileManager.default.removeItem(at: workspace) }
@@ -145,6 +173,74 @@ final class CoreTests: XCTestCase {
         do { try await task.value; XCTFail("Expected cancellation") } catch is CancellationError {} catch { XCTFail("Unexpected error: \(error)") }
         XCTAssertEqual(try Data(contentsOf: output), sentinel)
     }
+    func testJournalAppendsAndIgnoresOnlyTruncatedLastLine() throws {
+        let workspace = try scratch(); defer { try? FileManager.default.removeItem(at: workspace) }
+        let source = workspace.appendingPathComponent("original.pdf")
+        try fixturePDF().dataRepresentation()!.write(to: source)
+        let root = workspace.appendingPathComponent("test.pdfrecorder")
+        let manifest = try ProjectStore.create(at: root, source: source, title: "Journal", pageCount: 3)
+        let take = Take(duration: 1)
+        try writeAudio(at: ProjectStore.prepare(take, at: root), duration: 1)
+        let first = TimedEvent(time: 0.1, action: .pointer(Point(0.1, 0.2)))
+        let second = TimedEvent(time: 0.2, action: .pointer(nil))
+        let index = try ProjectStore.journal(ActiveTake(page: 0, take: take, events: [first]), at: root)
+        try ProjectStore.journal(ActiveTake(page: 0, take: take, events: [first, second]), from: index, at: root)
+        let log = try ProjectStore.location(take.eventsPath, in: root).deletingPathExtension().appendingPathExtension("ndjson")
+        let handle = try FileHandle(forWritingTo: log); try handle.seekToEnd(); try handle.write(contentsOf: Data("{truncated".utf8)); try handle.close()
+        let recovered = try ProjectStore.recover(at: root, manifest: manifest)
+        XCTAssertEqual(try ProjectStore.events(for: recovered.pages[0].selectedTake!, at: root), [first, second])
+    }
+    func testScannedPDFAndEmbeddedAnnotationsAppearInRenderer() throws {
+        let bitmap = NSImage(size: CGSize(width: 400, height: 600), flipped: false) { rect in
+            NSColor.white.setFill(); rect.fill()
+            NSColor.black.setFill(); NSRect(x: 50, y: 300, width: 280, height: 20).fill()
+            return true
+        }
+        let page = PDFPage(image: bitmap)!
+        let document = PDFDocument(); document.insert(page, at: 0)
+        let annotation = PDFAnnotation(bounds: CGRect(x: 50, y: 100, width: 200, height: 80), forType: .square, withProperties: nil)
+        annotation.interiorColor = .red; annotation.color = .red; page.addAnnotation(annotation)
+        let artwork = try PageArtwork(page: page, maximumDimension: 600)
+        let output = SceneRenderer.image(artwork: artwork, scene: Scene(), size: CGSize(width: 960, height: 540))!
+        let values = pixels(output)
+        var redPixels = 0
+        for i in stride(from: 0, to: values.count, by: 4) {
+            if values[i] > 180 && values[i + 1] < 80 && values[i + 2] < 80 { redPixels += 1 }
+        }
+        // The annotation occupies roughly 500 pixels in the 192x108 analysis image.
+        XCTAssertGreaterThan(redPixels, 400)
+        withExtendedLifetime(document) {}
+    }
+    func testCancellationAfterRenderingBeginsKeepsExistingFile() async throws {
+        let workspace = try scratch(); defer { try? FileManager.default.removeItem(at: workspace) }
+        let pdf = workspace.appendingPathComponent("source.pdf")
+        try fixturePDF().dataRepresentation()!.write(to: pdf)
+        let audio = workspace.appendingPathComponent("audio.caf"); try writeAudio(at: audio, duration: 1)
+        let destination = workspace.appendingPathComponent("keep.mp4")
+        let original = Data("existing file must survive".utf8); try original.write(to: destination)
+        let (signal, continuation) = AsyncStream<Void>.makeStream(bufferingPolicy: .bufferingNewest(1))
+        let task = Task {
+            defer { continuation.finish() }
+            try await VideoExporter.export(pdfURL: pdf, password: nil,
+                                           items: [.init(page: 0, take: Take(duration: 60), events: [], audioURL: audio)],
+                                           to: destination, width: 640, height: 360) { progress in
+                if progress > 0 { continuation.yield(()) }
+            }
+        }
+        for await _ in signal { break }
+        task.cancel()
+        do { try await task.value; XCTFail("Expected in-progress cancellation") } catch is CancellationError {} catch { XCTFail("Unexpected error: \(error)") }
+        XCTAssertEqual(try Data(contentsOf: destination), original)
+        XCTAssertFalse(try FileManager.default.contentsOfDirectory(atPath: workspace.path).contains { $0.hasPrefix(".pdfrecorder-") })
+    }
+}
+
+func pixels(_ image: CGImage) -> [UInt8] {
+    let width = 192, height = 108
+    let context = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: width * 4,
+                            space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue)!
+    context.draw(image, in: CGRect(x: 0, y: 0, width: width, height: height))
+    return Array(UnsafeBufferPointer(start: context.data!.assumingMemoryBound(to: UInt8.self), count: width * height * 4))
 }
 
 func scratch() throws -> URL {

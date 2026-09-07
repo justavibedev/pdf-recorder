@@ -22,7 +22,12 @@ targets:
   PDFRecorder:
     type: application
     platform: macOS
-    sources: [Sources/PDFRecorderApp]
+    sources:
+      - Sources/PDFRecorderApp
+      - path: THIRD_PARTY_NOTICES.md
+        buildPhase: resources
+      - path: LICENSE
+        buildPhase: resources
     dependencies:
       - target: PDFRecorderCore
     settings:
@@ -32,6 +37,7 @@ targets:
         INFOPLIST_FILE: Sources/PDFRecorderApp/Info.plist
         CODE_SIGN_ENTITLEMENTS: Sources/PDFRecorderApp/PDFRecorder.entitlements
         COMBINE_HIDPI_IMAGES: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
 schemes:
   PDFRecorder:
     build:
