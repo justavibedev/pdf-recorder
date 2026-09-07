@@ -146,8 +146,21 @@ final class MediaFeatureTests: XCTestCase {
         try writeAudio(at: input, duration: 0.8)
         var take = Take(duration: 0.8); take.trimStart = 0.2; take.trimEnd = 0.5
         try await AudioExporter.export(items: [.init(page: 0, take: take, events: [], audioURL: input)], to: output) { _ in }
-        let duration = try await AVURLAsset(url: output).load(.duration)
+        let duration = try await AVURLAsset(url: output, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true]).load(.duration)
         XCTAssertEqual(duration.seconds, 0.3, accuracy: 0.03)
+        // Check the decoded PCM rather than relying only on container duration estimates:
+        // AAC priming/remainder packets must not remove any part of the 0.3-second trim.
+        let decoded = try AVAudioFile(forReading: output)
+        let expectedFrames = Int64((take.playbackDuration * decoded.processingFormat.sampleRate).rounded())
+        XCTAssertEqual(decoded.length, expectedFrames)
+        let buffer = AVAudioPCMBuffer(pcmFormat: decoded.processingFormat, frameCapacity: 8192)!
+        var decodedFrames: Int64 = 0
+        while decoded.framePosition < decoded.length {
+            try decoded.read(into: buffer)
+            guard buffer.frameLength > 0 else { break }
+            decodedFrames += Int64(buffer.frameLength)
+        }
+        XCTAssertEqual(decodedFrames, expectedFrames)
         let original = try Data(contentsOf: output)
         let task = Task { [take] in try await AudioExporter.export(items: [.init(page: 0, take: take, events: [], audioURL: input)], to: output) { _ in } }
         task.cancel()

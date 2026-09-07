@@ -105,7 +105,7 @@ public enum VideoExporter {
         catch { writer.cancelWriting(); throw RecorderError.message("Rendering video failed: \(error.localizedDescription)") }
         try Task.checkCancellation()
         let composition = AVMutableComposition()
-        let videoAsset = AVURLAsset(url: silentURL)
+        let videoAsset = AVURLAsset(url: silentURL, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
         let audioComposition = AVMutableComposition()
         guard let videoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
               let audioTrack = audioComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid),
@@ -118,7 +118,7 @@ public enum VideoExporter {
             let processed = temporary.appendingPathComponent("\(UUID().uuidString).caf")
             try await AudioProcessing.renderPlayback(take: item.take, source: item.audioURL, to: processed,
                                                      matchLoudness: options.matchLoudness, fadeSeconds: options.boundaryFadeSeconds)
-            let asset = AVURLAsset(url: processed)
+            let asset = AVURLAsset(url: processed, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
             guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw RecorderError.message("A take's audio is missing.") }
             let available = try await asset.load(.duration)
             let length = CMTimeMinimum(duration, available)
@@ -130,8 +130,9 @@ public enum VideoExporter {
             throw RecorderError.message("AAC audio export is unavailable on this Mac.")
         }
         audioSession.outputURL = encodedAudioURL; audioSession.outputFileType = .m4a
+        audioSession.timeRange = CMTimeRange(start: .zero, duration: audioComposition.duration)
         try await run(audioSession) { progress(0.8 + $0 * 0.1) }
-        let encodedAudio = AVURLAsset(url: encodedAudioURL)
+        let encodedAudio = AVURLAsset(url: encodedAudioURL, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
         guard let encodedTrack = try await encodedAudio.loadTracks(withMediaType: .audio).first,
               let finalAudio = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
             throw RecorderError.message("The encoded presentation audio could not be read.")

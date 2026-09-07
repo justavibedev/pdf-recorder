@@ -21,7 +21,7 @@ public enum AudioExporter {
             let processed = working.appendingPathComponent("\(index).caf")
             try await AudioProcessing.renderPlayback(take: item.take, source: item.audioURL, to: processed,
                                                      matchLoudness: options.matchLoudness, fadeSeconds: options.boundaryFadeSeconds)
-            let asset = AVURLAsset(url: processed)
+            let asset = AVURLAsset(url: processed, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
             guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw RecorderError.message("A selected take is missing its audio.") }
             let length = CMTimeMinimum(try await asset.load(.duration), CMTime(seconds: item.take.playbackDuration, preferredTimescale: 48_000))
             try audio.insertTimeRange(CMTimeRange(start: .zero, duration: length), of: track, at: cursor)
@@ -32,6 +32,9 @@ public enum AudioExporter {
         let temporary = destination.deletingLastPathComponent().appendingPathComponent(".pdfrecorder-\(UUID().uuidString).m4a")
         defer { try? FileManager.default.removeItem(at: temporary) }
         session.outputURL = temporary; session.outputFileType = .m4a
+        // Export the known PCM presentation range explicitly. AAC includes encoder priming
+        // and padding samples, which must not shorten the requested presentation timeline.
+        session.timeRange = CMTimeRange(start: .zero, duration: cursor)
         try Task.checkCancellation()
         let handle = CancellationHandle(session: session)
         let reporter = Task {
