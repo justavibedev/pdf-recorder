@@ -12,8 +12,10 @@
 		2F60CA1EDE6D3DB03CA04AF6 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4806B2338C0803B2990FD3A /* ProjectStore.swift */; };
 		3042631A10BE98E5E5C525AD /* MicrophoneRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 816305D049F58B4EF9097870 /* MicrophoneRecorder.swift */; };
 		32AD8B4622519684413CEFAB /* Assets.xcassets in Resources */ = {isa = PBXBuildFile; fileRef = 41B71397F74B4AA9B5017516 /* Assets.xcassets */; };
+		50D84E61FBCEEFE967F39453 /* PresentationTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1103C428D7B240A01C68945C /* PresentationTools.swift */; };
 		5605486737CF10426AB4A7E5 /* PDFRecorderCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */; };
 		61459CE168DD1C0B3C1682FF /* PDFCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */; };
+		646BD2304908DA9AB28A5D39 /* AudioExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6C5FB31ECF059545D6616625 /* AudioExporter.swift */; };
 		6B8CCE55ADC2960DFAC03CE8 /* RareComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82973A801FEBFA3909169D91 /* RareComponents.swift */; };
 		79565C3FF529B9C84509107F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E3B6F9B700648D8461C9CE /* ContentView.swift */; };
 		7AE0B7DC6B1264AE758D3CFF /* PDFRecorderCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
@@ -22,6 +24,7 @@
 		A4A8937FB25A6FBE95306554 /* LICENSE in Resources */ = {isa = PBXBuildFile; fileRef = F1DC3A882786B88AF2D1ECF3 /* LICENSE */; };
 		DBB031F1CC5AE0B885BDCBDB /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796DAC5FEBC44BF536768740 /* AppModel.swift */; };
 		EF69E8362212D7D12AB22401 /* PDFRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0528E446E88A316E693B0863 /* PDFRecorderApp.swift */; };
+		F071C5938524CF91CE0713B5 /* PresenterNotesView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 4CD37DF5624E20911ABD65C9 /* PresenterNotesView.swift */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXContainerItemProxy section */
@@ -50,8 +53,11 @@
 
 /* Begin PBXFileReference section */
 		0528E446E88A316E693B0863 /* PDFRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFRecorderApp.swift; sourceTree = "<group>"; };
+		1103C428D7B240A01C68945C /* PresentationTools.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresentationTools.swift; sourceTree = "<group>"; };
 		41B71397F74B4AA9B5017516 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
+		4CD37DF5624E20911ABD65C9 /* PresenterNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresenterNotesView.swift; sourceTree = "<group>"; };
 		6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRenderer.swift; sourceTree = "<group>"; };
+		6C5FB31ECF059545D6616625 /* AudioExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioExporter.swift; sourceTree = "<group>"; };
 		6D25165232D58181C22160D3 /* THIRD_PARTY_NOTICES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = THIRD_PARTY_NOTICES.md; sourceTree = "<group>"; };
 		78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PDFRecorderCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
 		796DAC5FEBC44BF536768740 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
@@ -83,7 +89,9 @@
 		608CEC2F416923CDDE7D916D /* PDFRecorderCore */ = {
 			isa = PBXGroup;
 			children = (
+				6C5FB31ECF059545D6616625 /* AudioExporter.swift */,
 				99E665FF99543FF9E7E241BD /* Models.swift */,
+				1103C428D7B240A01C68945C /* PresentationTools.swift */,
 				D4806B2338C0803B2990FD3A /* ProjectStore.swift */,
 				6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */,
 				DE35BDCAD7A332A93E712CE2 /* VideoExporter.swift */,
@@ -123,6 +131,7 @@
 				E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */,
 				DA24B2B859DA078ACD183984 /* PDFRecorder.entitlements */,
 				0528E446E88A316E693B0863 /* PDFRecorderApp.swift */,
+				4CD37DF5624E20911ABD65C9 /* PresenterNotesView.swift */,
 				82973A801FEBFA3909169D91 /* RareComponents.swift */,
 			);
 			name = PDFRecorderApp;
@@ -225,7 +234,9 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				646BD2304908DA9AB28A5D39 /* AudioExporter.swift in Sources */,
 				29DAFC7A9A0085CE06F875B0 /* Models.swift in Sources */,
+				50D84E61FBCEEFE967F39453 /* PresentationTools.swift in Sources */,
 				2F60CA1EDE6D3DB03CA04AF6 /* ProjectStore.swift in Sources */,
 				9D9204C596A7D8619CF9F09F /* SceneRenderer.swift in Sources */,
 				03FBB32375EC447F1A9BBE89 /* VideoExporter.swift in Sources */,
@@ -241,6 +252,7 @@
 				3042631A10BE98E5E5C525AD /* MicrophoneRecorder.swift in Sources */,
 				61459CE168DD1C0B3C1682FF /* PDFCanvas.swift in Sources */,
 				EF69E8362212D7D12AB22401 /* PDFRecorderApp.swift in Sources */,
+				F071C5938524CF91CE0713B5 /* PresenterNotesView.swift in Sources */,
 				6B8CCE55ADC2960DFAC03CE8 /* RareComponents.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;

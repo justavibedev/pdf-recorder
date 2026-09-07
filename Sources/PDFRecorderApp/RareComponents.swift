@@ -70,7 +70,7 @@ private struct FolderFlap: Shape {
 @MainActor struct RareStepPlayer: View {
     @ObservedObject var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
-    private var items: [(page: Int, take: Take)] { model.manifest?.selectedTakes ?? [] }
+    private var items: [(page: Int, take: Take)] { model.manifest?.exportTakes ?? [] }
     private var visible: [Int] {
         let active = items.firstIndex { $0.page == model.pageIndex } ?? 0
         let start = max(0, min(active - 2, items.count - 5))
@@ -106,6 +106,6 @@ private struct FolderFlap: Shape {
             Spacer(minLength: 0)
         }
         .animation(reduceMotion ? nil : .spring(duration: 0.42, bounce: 0.14), value: model.pageIndex)
-        .disabled(model.isRecording || model.mode == .exporting || items.isEmpty)
+        .disabled(model.isRecording || model.mode == .exporting || model.mode == .rehearsing || items.isEmpty)
     }
 }

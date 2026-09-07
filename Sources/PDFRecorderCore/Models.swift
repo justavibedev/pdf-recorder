@@ -100,6 +100,11 @@ public struct Take: Codable, Identifiable, Equatable, Sendable {
 public struct PageRecord: Codable, Equatable, Sendable {
     public var takes: [Take] = []
     public var selectedTakeID: UUID?
+    public var title: String?
+    public var notes: String?
+    public var bookmarked: Bool?
+    public var targetSeconds: Double?
+    public var includedInExport: Bool?
     public var selectedTake: Take? { takes.first { $0.id == selectedTakeID } }
     public init() {}
     public mutating func add(_ take: Take) { takes.append(take); selectedTakeID = take.id }
@@ -110,7 +115,7 @@ public struct PageRecord: Codable, Equatable, Sendable {
 }
 
 public struct ProjectManifest: Codable, Equatable, Sendable {
-    public var version = 1
+    public var version = 2
     public var id = UUID()
     public var title: String
     public var sourcePDF = "source.pdf"
@@ -120,6 +125,9 @@ public struct ProjectManifest: Codable, Equatable, Sendable {
     }
     public var selectedTakes: [(page: Int, take: Take)] {
         pages.enumerated().compactMap { index, page in page.selectedTake.map { (index, $0) } }
+    }
+    public var exportTakes: [(page: Int, take: Take)] {
+        selectedTakes.filter { pages[$0.page].includedInExport != false }
     }
 }
 

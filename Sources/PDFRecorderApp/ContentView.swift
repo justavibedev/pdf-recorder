@@ -26,9 +26,10 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
             }
             ToolbarItemGroup(placement: .primaryAction) {
                 if model.manifest != nil {
+                    Button { model.focusMode.toggle() } label: { Label("Focus", systemImage: model.focusMode ? "sidebar.left" : "rectangle.center.inset.filled") }.help("Show or hide page sidebar")
                     Button("Save Project", systemImage: "square.and.arrow.down", action: model.saveAs).disabled(model.mode != .idle)
-                    Button("Export Video", systemImage: "square.and.arrow.up") { model.exportSummary = true }
-                        .disabled(model.mode != .idle || model.manifest?.selectedTakes.isEmpty != false)
+                    Button("Export", systemImage: "square.and.arrow.up") { model.exportSummary = true }
+                        .disabled(model.mode != .idle || model.manifest?.exportTakes.isEmpty != false)
                 }
             }
         }
@@ -74,7 +75,7 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
     }
     private var workspace: some View {
         HSplitView {
-            pageSidebar.frame(minWidth: 170, idealWidth: 196, maxWidth: 250)
+            if !model.focusMode { pageSidebar.frame(minWidth: 170, idealWidth: 196, maxWidth: 250) }
             VStack(spacing: 0) {
                 canvasToolbar
                 Divider()
@@ -83,6 +84,7 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
                         Label(modeLabel, systemImage: model.isRecording ? "record.circle" : "doc.text")
                             .font(.caption.weight(.semibold)).foregroundStyle(model.isRecording ? Color.red : Color.secondary)
                         Spacer()
+                        PaceIndicator(model: model)
                         Text("PAGE \(model.pageIndex + 1)").font(.caption.monospaced().weight(.medium)).foregroundStyle(.secondary)
                     }
                     Spacer(minLength: 0)
@@ -90,6 +92,15 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
                         .clipShape(RoundedRectangle(cornerRadius: 8))
                         .overlay(RoundedRectangle(cornerRadius: 8).strokeBorder(Color.primary.opacity(0.08)))
                         .shadow(color: .black.opacity(0.1), radius: 14, y: 5)
+                        .overlay {
+                            if model.mode == .countdown {
+                                VStack(spacing: 12) {
+                                    Text("\(model.countdownRemaining)").font(.system(size: 72, weight: .semibold, design: .rounded)).monospacedDigit()
+                                    Text("Get ready to explain").font(.headline)
+                                    Button("Cancel", action: model.cancelCountdown).buttonStyle(.bordered)
+                                }.padding(30).background(.regularMaterial, in: RoundedRectangle(cornerRadius: 20))
+                            }
+                        }
                     Spacer(minLength: 0)
                     HStack(spacing: 12) {
                         Button { model.navigate(to: model.pageIndex - 1) } label: { Image(systemName: "chevron.left") }
@@ -123,17 +134,28 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
         case .playing: return "PLAYBACK"
         case .starting: return "STARTING MICROPHONE"
         case .stopping: return "SAVING TAKE"
+        case .countdown: return "GET READY"
+        case .rehearsing: return "PRACTICE · MICROPHONE OFF"
         default: return "READY TO EXPLAIN"
         }
     }
     private var pageSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
-            HStack { Text("Pages").font(.headline); Spacer(); Text("\(model.manifest?.selectedTakes.count ?? 0)/\(model.manifest?.pages.count ?? 0)").font(.caption.monospacedDigit()).foregroundStyle(.secondary) }.padding(16)
+            VStack(spacing: 10) {
+                HStack { Text("Pages").font(.headline); Spacer(); Text("\(model.manifest?.selectedTakes.count ?? 0)/\(model.manifest?.pages.count ?? 0)").font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                ProgressView(value: Double(model.manifest?.selectedTakes.count ?? 0), total: Double(max(1, model.manifest?.pages.count ?? 1)))
+                TextField("Search pages & notes", text: $model.searchQuery).textFieldStyle(.roundedBorder).disabled(!model.canNavigate)
+                Picker("Filter pages", selection: $model.pageFilter) { ForEach(PageFilter.allCases) { filter in Text(filter.rawValue).tag(filter) } }
+                    .labelsHidden().disabled(!model.canNavigate)
+                if model.isSearching { Text("Searching PDF text…").font(.caption2).foregroundStyle(.secondary) }
+                Button("Next Unrecorded", systemImage: "arrow.right.circle", action: model.nextUnrecorded).font(.caption).disabled(!model.canNavigate)
+            }.padding(14)
             Divider()
             ScrollViewReader { proxy in
                 ScrollView {
                     LazyVStack(spacing: 12) {
-                        ForEach(0..<(model.manifest?.pages.count ?? 0), id: \.self) { index in
+                        if model.visiblePageIndices.isEmpty { Text("No matching pages").font(.callout).foregroundStyle(.secondary).padding() }
+                        ForEach(model.visiblePageIndices, id: \.self) { index in
                             Button { model.navigate(to: index) } label: {
                                 VStack(alignment: .leading, spacing: 7) {
                                     ZStack {
@@ -141,13 +163,15 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
                                         if let image = model.thumbnail(index) { Image(nsImage: image).resizable().scaledToFit().padding(3) }
                                     }.frame(height: 102).clipShape(RoundedRectangle(cornerRadius: 5))
                                     HStack {
-                                        Text("Page \(index + 1)").font(.caption.weight(.medium))
+                                        Text(model.pageTitle(index)).font(.caption.weight(.medium)).lineLimit(1)
+                                        if model.manifest?.pages[index].bookmarked == true { Image(systemName: "bookmark.fill").foregroundStyle(accent) }
                                         Spacer()
                                         if let take = model.manifest?.pages[index].selectedTake {
                                             Image(systemName: "checkmark.circle.fill").foregroundStyle(.green)
                                             Text(duration(take.duration)).monospacedDigit()
                                         } else { Text("Not recorded").foregroundStyle(.secondary) }
                                     }.font(.caption2)
+                                    if model.manifest?.pages[index].includedInExport == false { Text("Excluded from export").font(.caption2).foregroundStyle(.secondary) }
                                 }.padding(8)
                                     .background(index == model.pageIndex ? accent.opacity(0.1) : Color.clear, in: RoundedRectangle(cornerRadius: 9))
                                     .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(index == model.pageIndex ? accent : Color.primary.opacity(0.08), lineWidth: index == model.pageIndex ? 2 : 1))
@@ -185,16 +209,31 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
     }
     private var transport: some View {
         VStack(spacing: 13) {
-            if let take = model.selectedTake, !model.isRecording {
+            if let take = model.selectedTake, model.mode == .idle || model.mode == .playing {
                 HStack(spacing: 10) {
                     Text(duration(model.time)).frame(width: 40, alignment: .leading)
-                    Slider(value: Binding(get: { min(model.time, take.duration) }, set: model.seek), in: 0...max(0.01, take.duration))
+                    Slider(value: Binding(get: { min(model.time, take.duration) }, set: { model.seek(to: $0) }), in: 0...max(0.01, take.duration))
                         .accessibilityLabel("Playback position").disabled(model.mode == .exporting)
                     Text(duration(take.duration)).frame(width: 40, alignment: .trailing)
                 }.font(.caption.monospacedDigit()).foregroundStyle(.secondary)
+                HStack {
+                    Button { model.skipPlayback(-10) } label: { Label("Back 10s", systemImage: "gobackward.10") }
+                    Button { model.skipPlayback(10) } label: { Label("Forward 10s", systemImage: "goforward.10") }
+                    Spacer()
+                    Picker("Playback speed", selection: $model.playbackRate) {
+                        ForEach([Float(0.75), 1, 1.25, 1.5, 2], id: \.self) { speed in Text("\(speed, specifier: "%g")×").tag(speed) }
+                    }.frame(width: 150)
+                }.font(.caption).buttonStyle(.borderless)
             }
             HStack(spacing: 12) {
-                if model.isRecording {
+                if model.mode == .countdown {
+                    Button("Cancel Countdown", action: model.cancelCountdown)
+                    Text("Microphone starts after the countdown").font(.caption).foregroundStyle(.secondary)
+                } else if model.mode == .rehearsing {
+                    Button(action: model.togglePractice) { Label("End Practice", systemImage: "stop.fill") }.buttonStyle(.borderedProminent)
+                    Text(duration(model.time)).font(.title3.monospacedDigit())
+                    Text("Microphone off · no take saved").font(.caption).foregroundStyle(.secondary)
+                } else if model.isRecording {
                     Button { model.togglePause() } label: { Label(model.mode == .paused ? "Resume" : "Pause", systemImage: model.mode == .paused ? "play.fill" : "pause.fill") }
                         .disabled(model.mode == .starting || model.mode == .stopping)
                     Button { Task { await model.stopRecording() } } label: { Label("Stop & Save", systemImage: "stop.fill") }
@@ -205,6 +244,7 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
                         .buttonStyle(.borderedProminent).tint(.red).disabled(model.mode != .idle)
                     Button { model.play() } label: { Label(model.mode == .playing ? "Pause" : "Play Take", systemImage: model.mode == .playing ? "pause.fill" : "play.fill") }
                         .disabled(model.selectedTake == nil || model.mode == .exporting)
+                    Button(action: model.togglePractice) { Label("Practice", systemImage: "timer") }.disabled(model.mode != .idle)
                 }
                 Spacer()
                 Image(systemName: "mic.fill").foregroundStyle(.secondary)
@@ -221,9 +261,16 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
     }
     private var takeSidebar: some View {
         VStack(alignment: .leading, spacing: 0) {
+            Picker("Inspector", selection: $model.showNotes) {
+                Text("Takes").tag(false)
+                Text("Notes & Timing").tag(true)
+            }.pickerStyle(.segmented).padding(12)
+            if model.showNotes {
+                PresenterNotesView(model: model)
+            } else {
             VStack(alignment: .leading, spacing: 6) {
                 Text("Page \(model.pageIndex + 1) takes").font(.headline)
-                Text("Select the take to use in your video.").font(.caption).foregroundStyle(.secondary)
+                Text("Select the take to use in your export.").font(.caption).foregroundStyle(.secondary)
             }.padding(16)
             Divider()
             if model.page?.takes.isEmpty != false {
@@ -242,7 +289,7 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
                                     VStack(alignment: .leading, spacing: 6) {
                                         HStack { Text("Take \(index + 1)").font(.callout.weight(.semibold)); Spacer(); Text(duration(take.duration)).font(.caption.monospacedDigit()) }
                                         Text(take.recovered ? "Recovered recording" : take.createdAt.formatted(date: .omitted, time: .shortened)).font(.caption2).foregroundStyle(.secondary)
-                                        if take.id == model.page?.selectedTakeID { Text("INCLUDED IN EXPORT").font(.system(size: 9, weight: .semibold)).foregroundStyle(accent) }
+                                        if take.id == model.page?.selectedTakeID { Text(model.page?.includedInExport == false ? "SELECTED · PAGE EXCLUDED" : "INCLUDED IN EXPORT").font(.system(size: 9, weight: .semibold)).foregroundStyle(accent) }
                                     }
                                 }.padding(12).background(take.id == model.page?.selectedTakeID ? accent.opacity(0.08) : Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 8))
                             }.buttonStyle(.plain).disabled(model.mode != .idle)
@@ -252,6 +299,7 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
                 }
             }
             Spacer(minLength: 8)
+            }
             Divider()
             VStack(alignment: .leading, spacing: 12) {
                 Label("Microphone", systemImage: "mic").font(.caption.weight(.semibold))
@@ -260,8 +308,12 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
                     ForEach(model.inputs, id: \.uniqueID) { input in Text(input.localizedName).tag(input.uniqueID) }
                 }.labelsHidden().disabled(model.mode != .idle)
                 Button("Refresh inputs", action: model.refreshInputs).font(.caption).buttonStyle(.link).disabled(model.mode != .idle)
+                Picker("Countdown", selection: $model.countdownSeconds) {
+                    Text("Off").tag(0); Text("3 seconds").tag(3); Text("5 seconds").tag(5)
+                }.font(.caption).disabled(model.mode != .idle)
                 Divider()
                 HStack { Text("Your presentation").font(.caption.weight(.medium)); Spacer(); Text(duration(model.totalDuration)).font(.caption.monospacedDigit()).foregroundStyle(.secondary) }
+                if model.targetDuration > 0 { Text("Planned time: \(duration(model.targetDuration))").font(.caption2).foregroundStyle(.secondary) }
                 RareStepPlayer(model: model)
             }.padding(16)
         }.background(Color(nsColor: .controlBackgroundColor))
@@ -269,13 +321,14 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
     private var exportConfirmation: some View {
         VStack(alignment: .leading, spacing: 20) {
             Label("Export your presentation", systemImage: "arrow.up.right.video").font(.title2.weight(.semibold))
-            Text("Your selected takes will play in PDF page order, with your voice, pointer, marks, and zoom movements.").foregroundStyle(.secondary)
-            let count = model.manifest?.selectedTakes.count ?? 0
+            Picker("Format", selection: $model.exportKind) { ForEach(AppModel.ExportKind.allCases, id: \.self) { kind in Text(kind.rawValue).tag(kind) } }.pickerStyle(.segmented)
+            Text(model.exportKind == .video ? "Selected takes play in page order, including voice and gestures. Private notes stay out of the video." : "Take your presentation with you as an audio file for revision. Only selected, included pages are exported.").foregroundStyle(.secondary)
+            let count = model.manifest?.exportTakes.count ?? 0
             Grid(alignment: .leading, horizontalSpacing: 24, verticalSpacing: 12) {
                 GridRow { Text("Recorded pages"); Text("\(count)").bold() }
-                GridRow { Text("Unrecorded pages skipped"); Text("\((model.manifest?.pages.count ?? 0) - count)").bold() }
+                GridRow { Text("Excluded or unrecorded pages"); Text("\((model.manifest?.pages.count ?? 0) - count)").bold() }
                 GridRow { Text("Duration"); Text(duration(model.totalDuration)).monospacedDigit() }
-                GridRow { Text("Video"); Text("1080p · 30 fps · MP4") }
+                GridRow { Text("Output"); Text(model.exportKind == .video ? "1080p · 30 fps · MP4" : "AAC audio · M4A") }
             }.padding(16).frame(maxWidth: .infinity, alignment: .leading).background(.quaternary, in: RoundedRectangle(cornerRadius: 10))
             HStack { Button("Cancel") { model.exportSummary = false }; Spacer(); Button("Choose Save Location…") { model.exportSummary = false; model.export() }.buttonStyle(.borderedProminent) }
         }.padding(28).frame(width: 470)
@@ -283,7 +336,7 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
     private var exportProgress: some View {
         VStack(spacing: 20) {
             Image(systemName: "film.stack").font(.largeTitle).foregroundStyle(accent)
-            Text("Making your video").font(.title2.weight(.semibold))
+            Text(model.exportKind == .video ? "Making your video" : "Exporting your audio").font(.title2.weight(.semibold))
             Text("Rendering locally on your Mac.").foregroundStyle(.secondary)
             ProgressView(value: model.exportProgress)
             Text("\(Int(model.exportProgress * 100))%").monospacedDigit()

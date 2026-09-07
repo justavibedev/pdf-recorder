@@ -30,6 +30,15 @@ import PDFRecorderCore
                 Button("Previous Page") { model.navigate(to: model.pageIndex - 1) }.keyboardShortcut(.leftArrow, modifiers: .command).disabled(!model.canNavigate)
                 Button("Next Page") { model.navigate(to: model.pageIndex + 1) }.keyboardShortcut(.rightArrow, modifiers: .command).disabled(!model.canNavigate)
             }
+            CommandMenu("Presenting") {
+                Button("Practice / End Practice", action: model.togglePractice).keyboardShortcut("r", modifiers: [.command, .option]).disabled(model.manifest == nil || (model.mode != .idle && model.mode != .rehearsing))
+                Button("Show Notes / Takes") { model.showNotes.toggle() }.keyboardShortcut("n", modifiers: [.command, .shift])
+                Button("Bookmark Page", action: model.toggleBookmark).keyboardShortcut("b", modifiers: [.command, .shift]).disabled(model.mode != .idle || model.manifest == nil)
+                Button("Next Unrecorded Page", action: model.nextUnrecorded).keyboardShortcut("u", modifiers: [.command, .shift]).disabled(!model.canNavigate)
+                Button("Focus Mode") { model.focusMode.toggle() }.keyboardShortcut("f", modifiers: [.command, .shift])
+                Divider()
+                Button("Export Presenter Notes…", action: model.exportNotes).disabled(model.mode != .idle || model.manifest == nil)
+            }
         }
     }
 }
@@ -39,6 +48,8 @@ import PDFRecorderCore
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let model else { return .terminateNow }
+        guard model.flushMetadata() else { return .terminateCancel }
+        if model.mode == .countdown { model.cancelCountdown() }
         if model.mode == .starting || model.mode == .stopping { return .terminateCancel }
         if model.mode == .recording || model.mode == .paused {
             Task { await model.stopRecording(); sender.reply(toApplicationShouldTerminate: true) }

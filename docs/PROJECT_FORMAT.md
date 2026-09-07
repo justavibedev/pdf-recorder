@@ -1,4 +1,4 @@
-# Project format v1
+# Project format v2
 
 A `.pdfrecorder` project is a Finder package directory. It is self-contained;
 copying or moving the package also moves the PDF and recordings.
@@ -19,6 +19,26 @@ ordered `pages` array. Every page holds `takes` and an optional `selectedTakeID`
 Page indexes are zero-based. A take has a UUID, ISO-8601 creation date, duration
 in seconds, initial viewport, relative audio/events paths, and a recovery flag.
 The selected take is the one used for page playback and export.
+
+Version 2 adds optional page fields:
+
+| Field | Type | Default when absent |
+| --- | --- | --- |
+| `title` | String | Page number |
+| `notes` | String | Empty |
+| `bookmarked` | Boolean | False |
+| `targetSeconds` | Number, 0–86400 | No timing target |
+| `includedInExport` | Boolean | True |
+
+Notes and page settings save after a short typing debounce, and flush before
+switching projects, recording, practicing, exporting, or quitting. Notes are
+plain text in the package; they are never passed to the video renderer.
+
+The app accepts v1 and v2. A v1 manifest upgrades in memory on load, preserving
+all takes and selected IDs. Reading alone does not rewrite it; subsequent saves
+write v2. The 0.1 app cannot open a v2 project. Unknown future versions are rejected.
+Countdown, playback speed, search filters, and layout preferences are session
+settings and are not part of the portable project.
 
 The original PDF is copied byte-for-byte and never rewritten. Passwords are
 kept in memory only; encrypted source PDFs remain encrypted in the package.
@@ -70,10 +90,20 @@ inspection and are not included in playback or export.
 
 ## Export
 
-Only selected takes are included, in original PDF order. Each take is rounded
+Only selected takes on pages whose `includedInExport` is not false are included,
+in original PDF order. Excluding a page retains its takes and selection. Combined
+playback follows the same choices; individual page playback is still available.
+Each video take is rounded
 up to the next 1/30-second frame boundary, adding at most 33 ms of trailing
 silence. The output is 1920×1080, 30 fps, H.264/AAC in MP4. Export writes to a
 temporary destination and only replaces an existing file after completion.
+
+Audio-only export joins the same takes into AAC in an M4A container, using their
+audio durations without video-frame rounding. It also stages output and only
+finalizes after success. Playback speed does not change either export format.
+Notes can be explicitly exported as a separate UTF-8 Markdown document with
+page titles and timing targets; notes never appear in video or audio exports.
+Practice creates no audio, event journal, or take metadata.
 
 The renderer caches a rotation-corrected page bitmap with a maximum dimension
 of 3840 pixels. This bounds memory and preserves PDF annotations, but very deep

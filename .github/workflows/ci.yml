@@ -11,7 +11,7 @@ jobs:
     timeout-minutes: 20
     steps:
       - uses: actions/checkout@v4
-      - name: Test timeline, projects, renderer and MP4 export
+      - name: Test timeline, projects, presentation tools and media export
         run: swift test
       - name: Build universal app
         run: ./scripts/build.sh

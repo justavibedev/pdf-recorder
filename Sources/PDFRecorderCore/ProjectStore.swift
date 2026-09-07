@@ -49,12 +49,16 @@ public enum ProjectStore {
         try write(manifest, to: root.appendingPathComponent("manifest.json"))
     }
     public static func load(at root: URL) throws -> ProjectManifest {
-        let m = try decode(ProjectManifest.self, from: root.appendingPathComponent("manifest.json"))
-        guard m.version == 1 else { throw RecorderError.message("This project uses an unsupported format version (\(m.version)).") }
+        var m = try decode(ProjectManifest.self, from: root.appendingPathComponent("manifest.json"))
+        guard (1...2).contains(m.version) else { throw RecorderError.message("This project uses an unsupported format version (\(m.version)).") }
+        m.version = 2
         guard !m.pages.isEmpty, m.pages.count <= 100_000, m.sourcePDF == "source.pdf" else { throw RecorderError.message("The project has an invalid page list or source path.") }
         _ = try location(m.sourcePDF, in: root)
         var ids = Set<UUID>()
         for page in m.pages {
+            if let target = page.targetSeconds, !target.isFinite || target < 0 || target > 86_400 {
+                throw RecorderError.message("A page has an invalid presentation target.")
+            }
             if let selected = page.selectedTakeID, !page.takes.contains(where: { $0.id == selected }) {
                 throw RecorderError.message("A page refers to a missing selected take.")
             }

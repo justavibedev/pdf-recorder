@@ -7,8 +7,9 @@ import PDFRecorderCore
 extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.project", conformingTo: .package) }
 
 @MainActor final class AppModel: ObservableObject {
-    enum Mode { case idle, starting, recording, paused, stopping, playing, exporting }
-    @Published var manifest: ProjectManifest?
+    enum Mode { case idle, countdown, starting, recording, paused, stopping, playing, rehearsing, exporting }
+    enum ExportKind: String, CaseIterable { case video = "Video (MP4)", audio = "Audio only (M4A)" }
+    @Published var manifest: ProjectManifest? { didSet { refreshPageMatches() } }
     @Published var pdf: PDFDocument?
     @Published var projectURL: URL?
     @Published var pageIndex = 0
@@ -28,6 +29,23 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     @Published var recoveryProjects: [URL] = []
     @Published var showRecovery = false
     @Published var selectedTakeID: UUID?
+    @Published var searchQuery = "" { didSet { scheduleSearch() } }
+    @Published var pageFilter = PageFilter.all { didSet { refreshPageMatches() } }
+    @Published var visiblePageIndices: [Int] = []
+    @Published var isSearching = false
+    @Published var showNotes = false
+    @Published var focusMode = false
+    @Published var countdownSeconds = 3
+    @Published var countdownRemaining = 0
+    @Published var playbackRate: Float = 1 { didSet { player?.rate = playbackRate } }
+    @Published var exportKind = ExportKind.video
+    @Published var notesFontSize = 17.0
+    @Published var hasUnsavedMetadata = false
+    private var metadataSaveTask: Task<Void, Never>?
+    private var countdownTask: Task<Void, Never>?
+    private var searchTask: Task<Void, Never>?
+    private var indexedPageText: [String] = []
+    private var rehearsalStart = 0.0
     private let microphone = MicrophoneRecorder()
     private var activeTake: Take?
     private var events: [TimedEvent] = []
@@ -45,10 +63,11 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     private class ArtworkBox { let value: PageArtwork; init(_ value: PageArtwork) { self.value = value } }
     var page: PageRecord? { guard let manifest, manifest.pages.indices.contains(pageIndex) else { return nil }; return manifest.pages[pageIndex] }
     var selectedTake: Take? { page?.takes.first { $0.id == selectedTakeID } }
-    var canNavigate: Bool { mode == .idle || mode == .playing }
-    var canDraw: Bool { artwork != nil && (mode == .idle || mode == .recording) }
-    var isRecording: Bool { mode == .recording || mode == .paused || mode == .starting || mode == .stopping }
-    var totalDuration: Double { manifest?.selectedTakes.reduce(0) { $0 + $1.take.duration } ?? 0 }
+    var canNavigate: Bool { mode == .idle || mode == .playing || mode == .rehearsing }
+    var canDraw: Bool { artwork != nil && (mode == .idle || mode == .recording || mode == .rehearsing) }
+    var isRecording: Bool { mode == .recording || mode == .paused || mode == .starting || mode == .stopping || mode == .countdown }
+    var totalDuration: Double { manifest?.exportTakes.reduce(0) { $0 + $1.take.duration } ?? 0 }
+    var targetDuration: Double { manifest?.pages.filter { $0.includedInExport != false }.reduce(0) { $0 + ($1.targetSeconds ?? 0) } ?? 0 }
     var recoveryRoot: URL {
         FileManager.default.urls(for: .applicationSupportDirectory, in: .userDomainMask)[0]
             .appendingPathComponent("PDF Recorder/Recovery", isDirectory: true)
@@ -67,7 +86,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     }
     private func updateTimer() {
         timer?.invalidate(); timer = nil
-        guard mode == .recording || mode == .playing else { return }
+        guard mode == .recording || mode == .playing || mode == .rehearsing else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
             guard let model = self else { return }
             Task { @MainActor in model.tick() }
@@ -105,7 +124,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         return field.stringValue
     }
     func open(_ url: URL) {
-        guard mode == .idle else { return }
+        guard mode == .idle, flushMetadata() else { return }
         do {
             let root: URL
             var newManifest: ProjectManifest
@@ -137,6 +156,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
                 root = recoveryRoot.appendingPathComponent("\(title)-\(UUID().uuidString.prefix(8)).pdfrecorder")
                 newManifest = try ProjectStore.create(at: root, source: url, title: title, pageCount: loaded.pageCount)
             }
+            searchTask?.cancel(); indexedPageText = []; searchQuery = ""; pageFilter = .all
             pdf = document; manifest = newManifest; projectURL = root; password = newPassword
             thumbnailCache.removeAllObjects(); artworkCache.removeAllObjects()
             showRecovery = false; status = ""
@@ -144,7 +164,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         } catch { errorMessage = error.localizedDescription }
     }
     func saveAs() {
-        guard mode == .idle, let root = projectURL, let manifest else { return }
+        guard mode == .idle, flushMetadata(), let root = projectURL, let manifest else { return }
         let panel = NSSavePanel(); panel.allowedContentTypes = [.pdfRecorder]; panel.nameFieldStringValue = manifest.title + ".pdfrecorder"
         panel.message = "Save a portable project containing your PDF and every take."
         guard panel.runModal() == .OK, let destination = panel.url, destination != root else { return }
@@ -170,6 +190,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     private func loadPage(_ index: Int) {
         pageIndex = index; selectedTakeID = page?.selectedTakeID
         scene = Scene(); time = 0; undoActions = []; timeline = nil
+        if mode == .rehearsing { rehearsalStart = ProcessInfo.processInfo.systemUptime }
         do {
             let key = NSNumber(value: index)
             if let cached = artworkCache.object(forKey: key) { artwork = cached.value }
@@ -195,7 +216,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     }
     func fit() { apply(.viewport(Viewport())) }
     func record() {
-        guard mode == .idle, artwork != nil, let root = projectURL else { return }
+        guard mode == .idle, artwork != nil, flushMetadata(), let root = projectURL else { return }
         // Do not overwrite a pending recovery journal before the user can recover it.
         if FileManager.default.fileExists(atPath: root.appendingPathComponent("active-take.json").path) {
             let alert = NSAlert(); alert.messageText = "An unfinished take is waiting"
@@ -214,21 +235,29 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
                 }
             } catch { errorMessage = error.localizedDescription; return }
         }
-        mode = .starting
+        countdownRemaining = countdownSeconds
+        mode = countdownSeconds > 0 ? .countdown : .starting
         let take = Take(initialViewport: scene.viewport)
-        Task {
+        countdownTask = Task {
             do {
+                try await RecordingCountdown.run(seconds: countdownSeconds) { remaining in self.countdownRemaining = remaining }
+                try Task.checkCancellation()
+                countdownRemaining = 0; mode = .starting
                 let url = try ProjectStore.prepare(take, at: root)
                 try await microphone.start(deviceID: inputID, url: url)
                 activeTake = take; scene = Scene(viewport: take.initialViewport); events = []; undoActions = []
                 time = 0; lastJournal = 0; journalEventIndex = 0; mode = .recording; status = ""
                 try journal()
+            } catch is CancellationError {
+                countdownRemaining = 0; mode = .idle
             } catch {
                 _ = await microphone.stop(); mode = .idle; activeTake = nil
                 errorMessage = error.localizedDescription
             }
+            countdownTask = nil
         }
     }
+    func cancelCountdown() { guard mode == .countdown else { return }; countdownTask?.cancel() }
     func togglePause() {
         guard mode == .recording || mode == .paused else { return }
         if mode == .recording {
@@ -280,7 +309,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     }
     func play(all: Bool = false) {
         guard mode == .idle else { if mode == .playing { stopPlayback() }; return }
-        let items = all ? (manifest?.selectedTakes ?? []) : selectedTake.map { [(pageIndex, $0)] } ?? []
+        let items = all ? (manifest?.exportTakes ?? []) : selectedTake.map { [(pageIndex, $0)] } ?? []
         guard let first = items.first else { return }
         playbackQueue = Array(items.dropFirst())
         startPlayback(page: first.0, take: first.1, from: all ? 0 : (time >= first.1.duration ? 0 : time))
@@ -292,6 +321,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
             selectedTakeID = take.id
             timeline = Timeline(events: try ProjectStore.events(for: take, at: root), initialViewport: take.initialViewport)
             player = try AVAudioPlayer(contentsOf: ProjectStore.location(take.audioPath, in: root))
+            player?.enableRate = true; player?.rate = playbackRate
             player?.currentTime = start; player?.prepareToPlay()
             guard player?.play() == true else { throw RecorderError.message("This recording could not be played.") }
             mode = .playing; time = start
@@ -310,7 +340,9 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         } catch { errorMessage = error.localizedDescription }
     }
     private func tick() {
-        if mode == .recording || mode == .paused {
+        if mode == .rehearsing {
+            time = max(0, ProcessInfo.processInfo.systemUptime - rehearsalStart)
+        } else if mode == .recording || mode == .paused {
             let snapshot = microphone.snapshot; time = snapshot.time; level = snapshot.level
             if mode == .recording && time - lastJournal >= 2 {
                 lastJournal = time
@@ -330,12 +362,14 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         }
     }
     func export() {
-        guard mode == .idle, let manifest, let root = projectURL, !manifest.selectedTakes.isEmpty else { return }
-        let panel = NSSavePanel(); panel.allowedContentTypes = [.mpeg4Movie]; panel.nameFieldStringValue = manifest.title + ".mp4"
+        guard mode == .idle, flushMetadata(), let manifest, let root = projectURL, !manifest.exportTakes.isEmpty else { return }
+        let kind = exportKind
+        let panel = NSSavePanel(); panel.allowedContentTypes = kind == .video ? [.mpeg4Movie] : [.mpeg4Audio]
+        panel.nameFieldStringValue = manifest.title + (kind == .video ? ".mp4" : ".m4a")
         guard panel.runModal() == .OK, let destination = panel.url else { return }
         do {
-            let items = try manifest.selectedTakes.map { item in
-                ExportItem(page: item.page, take: item.take, events: try ProjectStore.events(for: item.take, at: root), audioURL: try ProjectStore.location(item.take.audioPath, in: root))
+            let items = try manifest.exportTakes.map { item in
+                ExportItem(page: item.page, take: item.take, events: kind == .video ? try ProjectStore.events(for: item.take, at: root) : [], audioURL: try ProjectStore.location(item.take.audioPath, in: root))
             }
             let pdfURL = try ProjectStore.location(manifest.sourcePDF, in: root)
             let password = self.password
@@ -343,13 +377,15 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
             mode = .exporting; exportProgress = 0
             exportTask = Task { [weak self] in
                 let worker = Task.detached(priority: .userInitiated) {
-                    try await VideoExporter.export(pdfURL: pdfURL, password: password, items: items, to: destination) { value in
+                    let progress: @Sendable (Double) -> Void = { value in
                         Task { @MainActor in progressObserver.exportProgress = value }
                     }
+                    if kind == .video { try await VideoExporter.export(pdfURL: pdfURL, password: password, items: items, to: destination, progress: progress) }
+                    else { try await AudioExporter.export(items: items, to: destination, progress: progress) }
                 }
                 do {
                     try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
-                    self?.status = "Video exported"
+                    self?.status = kind == .video ? "Video exported" : "Audio exported"
                     NSWorkspace.shared.activateFileViewerSelecting([destination])
                 } catch is CancellationError { self?.status = "Export cancelled" }
                 catch { self?.errorMessage = error.localizedDescription }
@@ -359,4 +395,80 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     }
     func cancelExport() { exportTask?.cancel() }
     func revealProject() { if let projectURL { NSWorkspace.shared.activateFileViewerSelecting([projectURL]) } }
+
+    func pageTitle(_ index: Int) -> String {
+        guard let manifest, manifest.pages.indices.contains(index) else { return "Page \(index + 1)" }
+        return PresentationTools.title(for: manifest.pages[index], index: index)
+    }
+    func updatePage(_ change: (inout PageRecord) -> Void) {
+        guard mode == .idle, var updated = manifest else { return }
+        change(&updated.pages[pageIndex]); manifest = updated; hasUnsavedMetadata = true
+        metadataSaveTask?.cancel()
+        metadataSaveTask = Task { [weak self] in
+            do { try await Task.sleep(nanoseconds: 500_000_000); _ = self?.flushMetadata() }
+            catch {}
+        }
+    }
+    @discardableResult func flushMetadata() -> Bool {
+        metadataSaveTask?.cancel(); metadataSaveTask = nil
+        guard hasUnsavedMetadata, let manifest, let root = projectURL else { return true }
+        do { try ProjectStore.save(manifest, at: root); hasUnsavedMetadata = false; return true }
+        catch { errorMessage = "Presenter notes or page settings could not be saved: \(error.localizedDescription)"; return false }
+    }
+    func toggleBookmark() { updatePage { $0.bookmarked = !($0.bookmarked ?? false) } }
+    func nextUnrecorded() {
+        guard canNavigate else { return }
+        guard let manifest, let next = PresentationTools.nextUnrecorded(in: manifest, after: pageIndex) else { status = "Every page has a recording"; return }
+        searchQuery = ""; pageFilter = .unfinished
+        navigate(to: next)
+    }
+    private func refreshPageMatches() {
+        guard let manifest else { visiblePageIndices = []; return }
+        visiblePageIndices = PresentationTools.matchingPages(in: manifest, query: searchQuery, filter: pageFilter, pageText: indexedPageText)
+    }
+    private func scheduleSearch() {
+        searchTask?.cancel(); refreshPageMatches(); isSearching = false
+        guard !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
+              let manifest, indexedPageText.count != manifest.pages.count, let root = projectURL else { return }
+        let id = manifest.id, password = self.password
+        let url = root.appendingPathComponent(manifest.sourcePDF)
+        isSearching = true
+        searchTask = Task { [weak self] in
+            do {
+                try await Task.sleep(nanoseconds: 200_000_000)
+                let worker = Task.detached(priority: .userInitiated) { () throws -> [String] in
+                    guard let document = PDFDocument(url: url) else { return [] }
+                    if document.isLocked { _ = document.unlock(withPassword: password ?? "") }
+                    return try (0..<document.pageCount).map { index in
+                        try Task.checkCancellation(); return document.page(at: index)?.string ?? ""
+                    }
+                }
+                let text = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
+                try Task.checkCancellation()
+                guard let self, self.manifest?.id == id else { return }
+                self.indexedPageText = text; self.isSearching = false; self.refreshPageMatches()
+            } catch { /* A superseded query must not overwrite the new query's state. */ }
+        }
+    }
+    func togglePractice() {
+        if mode == .rehearsing {
+            mode = .idle; time = 0; timeline = nil
+            scene = Scene(viewport: scene.viewport); undoActions = []
+            status = "Practice complete · no recording saved"; return
+        }
+        guard mode == .idle, artwork != nil, flushMetadata() else { return }
+        rehearsalStart = ProcessInfo.processInfo.systemUptime; time = 0; timeline = nil
+        scene = Scene(viewport: scene.viewport); undoActions = []; showNotes = true; mode = .rehearsing
+    }
+    func skipPlayback(_ seconds: Double) {
+        guard let take = selectedTake else { return }
+        seek(to: PresentationTools.clampedPlaybackPosition(time, skipping: seconds, duration: take.duration))
+    }
+    func exportNotes() {
+        guard mode == .idle, flushMetadata(), let manifest else { return }
+        let panel = NSSavePanel(); panel.allowedContentTypes = [UTType(filenameExtension: "md") ?? .plainText]; panel.nameFieldStringValue = manifest.title + " — Notes.md"
+        guard panel.runModal() == .OK, let url = panel.url else { return }
+        do { try PresentationTools.notesMarkdown(manifest).write(to: url, atomically: true, encoding: .utf8); status = "Presenter notes exported" }
+        catch { errorMessage = error.localizedDescription }
+    }
 }

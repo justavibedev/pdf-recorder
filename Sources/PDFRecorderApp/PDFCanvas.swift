@@ -105,7 +105,9 @@ final class CanvasView: NSView {
         case 123, 126: model.navigate(to: model.pageIndex - 1)
         case 124, 125: model.navigate(to: model.pageIndex + 1)
         case 49:
-            if model.isRecording { model.togglePause() } else { model.play() }
+            if model.mode == .rehearsing { model.togglePractice() }
+            else if model.isRecording { model.togglePause() } else { model.play() }
+        case 53: model.cancelCountdown()
         default: super.keyDown(with: event)
         }
     }
