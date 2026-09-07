@@ -1,0 +1,39 @@
+name: PDFRecorder
+options:
+  bundleIdPrefix: org.pdfrecorder
+  deploymentTarget:
+    macOS: "14.0"
+settings:
+  base:
+    SWIFT_VERSION: "5.0"
+    MACOSX_DEPLOYMENT_TARGET: "14.0"
+    CODE_SIGN_IDENTITY: "-"
+    CODE_SIGN_STYLE: Manual
+    ENABLE_HARDENED_RUNTIME: YES
+targets:
+  PDFRecorderCore:
+    type: framework
+    platform: macOS
+    sources: [Sources/PDFRecorderCore]
+    settings:
+      base:
+        GENERATE_INFOPLIST_FILE: YES
+        PRODUCT_BUNDLE_IDENTIFIER: org.pdfrecorder.core
+  PDFRecorder:
+    type: application
+    platform: macOS
+    sources: [Sources/PDFRecorderApp]
+    dependencies:
+      - target: PDFRecorderCore
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: org.pdfrecorder.app
+        PRODUCT_NAME: PDF Recorder
+        INFOPLIST_FILE: Sources/PDFRecorderApp/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/PDFRecorderApp/PDFRecorder.entitlements
+        COMBINE_HIDPI_IMAGES: YES
+schemes:
+  PDFRecorder:
+    build:
+      targets:
+        PDFRecorder: all
