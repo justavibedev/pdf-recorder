@@ -19,6 +19,11 @@ jobs:
         run: |
           lipo -archs 'build/PDF Recorder.app/Contents/MacOS/PDF Recorder'
           codesign --verify --deep --strict 'build/PDF Recorder.app'
+          otool -L 'build/PDF Recorder.app/Contents/MacOS/PDF Recorder' > build/linked-libraries.txt
+          if grep -q '@rpath/PDFRecorderCore.framework' build/linked-libraries.txt; then
+            echo 'PDFRecorderCore must be statically linked for ad-hoc signed builds.'
+            exit 1
+          fi
       - name: Package app
         run: ditto -c -k --sequesterRsrc --keepParent 'build/PDF Recorder.app' build/PDF-Recorder-macOS.zip
       - uses: actions/upload-artifact@v4

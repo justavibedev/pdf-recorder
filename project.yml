@@ -21,6 +21,7 @@ targets:
       base:
         GENERATE_INFOPLIST_FILE: YES
         PRODUCT_BUNDLE_IDENTIFIER: org.pdfrecorder.core
+        MACH_O_TYPE: staticlib
   PDFRecorder:
     type: application
     platform: macOS
@@ -33,6 +34,7 @@ targets:
         buildPhase: resources
     dependencies:
       - target: PDFRecorderCore
+        embed: false
     settings:
       base:
         PRODUCT_BUNDLE_IDENTIFIER: org.pdfrecorder.app

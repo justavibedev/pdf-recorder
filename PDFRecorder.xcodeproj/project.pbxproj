@@ -30,7 +30,6 @@
 		653E14DEC4E851C9A082FB94 /* PresenterDisplay.swift in Sources */ = {isa = PBXBuildFile; fileRef = D6B6F00485C1F8A0EC4101E4 /* PresenterDisplay.swift */; };
 		6B8CCE55ADC2960DFAC03CE8 /* RareComponents.swift in Sources */ = {isa = PBXBuildFile; fileRef = 82973A801FEBFA3909169D91 /* RareComponents.swift */; };
 		79565C3FF529B9C84509107F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E3B6F9B700648D8461C9CE /* ContentView.swift */; };
-		7AE0B7DC6B1264AE758D3CFF /* PDFRecorderCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
 		7EFD0C76A64ED8B824E46CB2 /* WorkspacePanels.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2D4D03FFA0DA888A7BBAE8D1 /* WorkspacePanels.swift */; };
 		9BC24B6F8A576A43FEC128D6 /* THIRD_PARTY_NOTICES.md in Resources */ = {isa = PBXBuildFile; fileRef = 6D25165232D58181C22160D3 /* THIRD_PARTY_NOTICES.md */; };
 		9D9204C596A7D8619CF9F09F /* SceneRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */; };
@@ -61,20 +60,6 @@
 			remoteInfo = PDFRecorderCore;
 		};
 /* End PBXContainerItemProxy section */
-
-/* Begin PBXCopyFilesBuildPhase section */
-		A3C669D18F961F37E9AB114D /* Embed Frameworks */ = {
-			isa = PBXCopyFilesBuildPhase;
-			buildActionMask = 2147483647;
-			dstPath = "";
-			dstSubfolderSpec = 10;
-			files = (
-				7AE0B7DC6B1264AE758D3CFF /* PDFRecorderCore.framework in Embed Frameworks */,
-			);
-			name = "Embed Frameworks";
-			runOnlyForDeploymentPostprocessing = 0;
-		};
-/* End PBXCopyFilesBuildPhase section */
 
 /* Begin PBXFileReference section */
 		0528E446E88A316E693B0863 /* PDFRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFRecorderApp.swift; sourceTree = "<group>"; };
@@ -223,7 +208,6 @@
 				55440497446DD726B4B73D39 /* Sources */,
 				F9D2CC8D9B572E308D88CD99 /* Resources */,
 				50FC6ABABE13F01873008908 /* Frameworks */,
-				A3C669D18F961F37E9AB114D /* Embed Frameworks */,
 			);
 			buildRules = (
 			);
@@ -543,6 +527,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = org.pdfrecorder.core;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;
@@ -566,6 +551,7 @@
 					"$(inherited)",
 					"@executable_path/../Frameworks",
 				);
+				MACH_O_TYPE = staticlib;
 				PRODUCT_BUNDLE_IDENTIFIER = org.pdfrecorder.core;
 				SDKROOT = macosx;
 				SKIP_INSTALL = YES;

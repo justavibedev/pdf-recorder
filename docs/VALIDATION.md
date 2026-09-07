@@ -125,9 +125,13 @@ ZIP **4 MB**, excluding projects. The macOS CI workflow runs the full suite,
 universal build and signature checks; consult the run for the exact commit
 being reviewed.
 
-Interactive review of the 0.4 app is authorized but remains pending: the launch
-attempt could not proceed while the host Mac was locked. Microphone recording
-has not been authorized or performed during implementation.
+The 0.4 app launches locally. Interactive review confirmed the dark welcome
+screen, importing three PDFs together, document tabs, and switching between
+portrait and landscape pages. Other interactive checklist items remain pending.
+The first launch exposed a hardened-runtime rejection of the ad-hoc signed
+embedded core framework; the app now links that code statically, and CI checks
+that no dynamic core dependency returns. Microphone recording has not been
+authorized or performed during implementation.
 
 Intel is cross-compiled, not hardware-tested. VoiceOver, physical microphone,
 multi-display and real 30-minute checks remain pending. See the
