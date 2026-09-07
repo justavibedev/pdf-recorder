@@ -9,11 +9,18 @@ public struct ExportItem: Sendable {
     public var events: [TimedEvent]
     public var audioURL: URL
     public var eventsURL: URL?
-    public init(page: Int, take: Take, events: [TimedEvent], audioURL: URL) {
+    public var pdfURL: URL?
+    public var pdfPage: Int?
+    public var pdfPassword: String?
+    public init(page: Int, take: Take, events: [TimedEvent], audioURL: URL,
+                pdfURL: URL? = nil, pdfPage: Int? = nil, pdfPassword: String? = nil) {
         self.page = page; self.take = take; self.events = events; self.audioURL = audioURL
+        self.pdfURL = pdfURL; self.pdfPage = pdfPage; self.pdfPassword = pdfPassword
     }
-    public init(page: Int, take: Take, eventsURL: URL, audioURL: URL) {
+    public init(page: Int, take: Take, eventsURL: URL, audioURL: URL,
+                pdfURL: URL? = nil, pdfPage: Int? = nil, pdfPassword: String? = nil) {
         self.page = page; self.take = take; self.events = []; self.eventsURL = eventsURL; self.audioURL = audioURL
+        self.pdfURL = pdfURL; self.pdfPage = pdfPage; self.pdfPassword = pdfPassword
     }
     public func loadEvents() throws -> [TimedEvent] {
         if let eventsURL { return try EventLogReader.readAll(url: eventsURL) }
@@ -36,8 +43,6 @@ public enum VideoExporter {
         guard width > 0, height > 0, items.allSatisfy({ $0.take.duration.isFinite && $0.take.playbackDuration * 30 < Double(Int.max) }) else {
             throw RecorderError.message("The export dimensions or a take's duration are invalid.")
         }
-        guard let pdf = PDFDocument(url: pdfURL) else { throw RecorderError.message("The source PDF could not be opened.") }
-        if pdf.isLocked { guard pdf.unlock(withPassword: password ?? "") else { throw RecorderError.message("Unlock the PDF before exporting.") } }
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
         try FileManager.default.createDirectory(at: temporary, withIntermediateDirectories: true)
         defer { try? FileManager.default.removeItem(at: temporary) }
@@ -61,10 +66,20 @@ public enum VideoExporter {
         let totalFrames = items.reduce(0) { $0 + Int(ceil($1.take.playbackDuration * 30)) }
         var frameIndex = 0
         var segments: [(ExportItem, CMTime, CMTime)] = []
+        var cachedURL: URL?, cachedPDF: PDFDocument?
         do {
             for item in items {
                 try Task.checkCancellation()
-                guard let page = pdf.page(at: item.page) else { throw RecorderError.message("A recorded PDF page is missing.") }
+                let sourceURL = (item.pdfURL ?? pdfURL).standardizedFileURL
+                if cachedURL != sourceURL {
+                    cachedPDF = nil
+                    guard let pdf = PDFDocument(url: sourceURL) else { throw RecorderError.message("The source PDF ‘\(sourceURL.lastPathComponent)’ could not be opened.") }
+                    if pdf.isLocked {
+                        guard pdf.unlock(withPassword: item.pdfPassword ?? password ?? "") else { throw RecorderError.message("Unlock the PDF before exporting.") }
+                    }
+                    cachedPDF = pdf; cachedURL = sourceURL
+                }
+                guard let page = cachedPDF?.page(at: item.pdfPage ?? item.page) else { throw RecorderError.message("A recorded PDF page is missing.") }
                 let artwork = try PageArtwork(page: page)
                 let timeline = try ExportTimeline(item: item)
                 let count = Int(ceil(item.take.playbackDuration * 30))

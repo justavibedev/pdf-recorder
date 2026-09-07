@@ -3,7 +3,7 @@ import PDFRecorderCore
 import UniformTypeIdentifiers
 
 enum ExportScope: String, CaseIterable, Identifiable {
-    case included = "Included pages", current = "Current page", range = "Page range", chapter = "Current chapter"
+    case included = "All documents", document = "Current document", current = "Current page", range = "Page range", chapter = "Current chapter"
     var id: String { rawValue }
 }
 
@@ -12,12 +12,13 @@ extension AppModel {
         guard let manifest else { return [] }
         switch exportScope {
         case .included: return Array(manifest.pages.indices).filter { manifest.pages[$0].includedInExport != false }
+        case .document: return Array(currentDocumentPages).filter { manifest.pages[$0].includedInExport != false }
         case .current: return [pageIndex]
-        case .range: return try ExportPageSelection.parse(exportRange, pageCount: manifest.pages.count)
+        case .range: return try ExportPageSelection.parse(exportRange, pageCount: currentDocumentPages.count).map { currentDocumentPages.lowerBound + $0 }
         case .chapter:
             let starts = Set(outlineItems.map(\.page)).sorted()
-            let first = starts.last { $0 <= pageIndex } ?? 0
-            let end = starts.first { $0 > pageIndex } ?? manifest.pages.count
+            let first = starts.last { $0 <= pageIndex } ?? currentDocumentPages.lowerBound
+            let end = starts.first { $0 > pageIndex } ?? currentDocumentPages.upperBound
             return Array(first..<end)
         }
     }
@@ -48,7 +49,12 @@ extension AppModel {
             }
             // File references only; decoding and rendering happen in the background one take at a time.
             let items = try selected.map { item in
-                ExportItem(page: item.page, take: item.take, eventsURL: try ProjectStore.location(item.take.eventsPath, in: root), audioURL: try ProjectStore.location(item.take.audioPath, in: root))
+                guard let source = manifest.document(containing: item.page), let localPage = manifest.localPageIndex(globalPage: item.page) else {
+                    throw RecorderError.message("A selected recording has no source PDF.")
+                }
+                return ExportItem(page: item.page, take: item.take, eventsURL: try ProjectStore.location(item.take.eventsPath, in: root),
+                                  audioURL: try ProjectStore.location(item.take.audioPath, in: root),
+                                  pdfURL: try ProjectStore.location(source.path, in: root), pdfPage: localPage, pdfPassword: documentPasswords[source.id])
             }
             let pdfURL = try ProjectStore.location(manifest.sourcePDF, in: root), password = self.password
             mode = .exporting; exportProgress = 0; exportStartedAt = Date()

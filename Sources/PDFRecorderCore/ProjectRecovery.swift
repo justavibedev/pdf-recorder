@@ -67,19 +67,33 @@ public enum ProjectRecovery {
             .filter { $0.pathExtension == "json" }.map { try ProjectStore.decode(ProjectSnapshot.self, from: $0) }.sorted { $0.date > $1.date }
     }
     public static func restoreSnapshot(_ snapshot: ProjectSnapshot, current: ProjectManifest, at root: URL) throws -> ProjectManifest {
-        guard snapshot.manifest.id == current.id, snapshot.manifest.pages.count == current.pages.count else { throw RecorderError.message("This snapshot belongs to a different project.") }
-        for take in snapshot.manifest.pages.flatMap(\.takes) { try checkMedia(take, at: root) }
+        try ProjectStore.validateDocuments(snapshot.manifest, at: root, checkingFiles: false)
+        try ProjectStore.validateDocuments(current, at: root, checkingFiles: false)
+        let savedDocuments = snapshot.manifest.pdfDocuments, currentDocuments = current.pdfDocuments
+        guard snapshot.manifest.id == current.id, savedDocuments.count <= currentDocuments.count,
+              zip(savedDocuments, currentDocuments).allSatisfy({ $0.id == $1.id && $0.path == $1.path && $0.pageCount == $1.pageCount }) else {
+            throw RecorderError.message("This snapshot has a different PDF order or belongs to another project.")
+        }
+        // Source documents are append-only. Restore the saved page range while
+        // keeping documents, notes, and takes added after the snapshot.
+        var restored = snapshot.manifest
+        restored.version = 4
+        if savedDocuments.count < currentDocuments.count {
+            restored.documents = savedDocuments + currentDocuments.dropFirst(savedDocuments.count)
+            restored.pages += current.pages.dropFirst(snapshot.manifest.pages.count)
+        }
+        for take in restored.pages.flatMap(\.takes) { try checkMedia(take, at: root) }
         try self.snapshot(current, reason: "Before restoring \(snapshot.reason)", at: root)
         var deleted = try trash(at: root)
-        let restoringIDs = Set(snapshot.manifest.pages.flatMap(\.takes).map(\.id))
+        let restoringIDs = Set(restored.pages.flatMap(\.takes).map(\.id))
         for (page, record) in current.pages.enumerated() {
             for take in record.takes where !restoringIDs.contains(take.id) && !deleted.contains(where: { $0.id == take.id }) { deleted.append(.init(page: page, take: take)) }
         }
         try ProjectStore.write(deleted, to: root.appendingPathComponent("trash.json"))
-        try ProjectStore.save(snapshot.manifest, at: root)
+        try ProjectStore.save(restored, at: root)
         deleted.removeAll { restoringIDs.contains($0.id) }
         try ProjectStore.write(deleted, to: root.appendingPathComponent("trash.json"))
-        return snapshot.manifest
+        return restored
     }
     public static func removeSnapshot(_ id: UUID, at root: URL) throws {
         try FileManager.default.removeItem(at: root.appendingPathComponent("snapshots/\(id.uuidString).json"))

@@ -8,14 +8,14 @@ import PDFRecorderCore
         ScrollView {
             VStack(alignment: .leading, spacing: 14) {
                 VStack(alignment: .leading, spacing: 4) {
-                    Text("Page \(model.pageIndex + 1) takes").font(.headline)
-                    Text("Listen freely. Choose which take to export.").font(.caption).foregroundStyle(.secondary)
+                    Text("Page \(model.currentDocumentPageNumber) takes").font(.system(size: 13, weight: .semibold))
+                    Text(model.currentDocument?.title ?? "This PDF").font(.system(size: 11)).foregroundStyle(StudioTheme.faint).lineLimit(1)
                 }
                 if model.page?.takes.isEmpty != false {
                     VStack(spacing: 12) {
-                        Image(systemName: "waveform").font(.system(size: 30, weight: .light)).foregroundStyle(Color.accentColor)
-                        Text("A fresh page").font(.headline)
-                        Text("Record your explanation, then compare takes and polish the best one here.")
+                        Image(systemName: "waveform").font(.system(size: 24, weight: .light)).foregroundStyle(StudioTheme.faint)
+                        Text("Your first take starts here.").font(.system(size: 13, weight: .medium))
+                        Text("Record this page to review and choose a take.")
                             .font(.callout).foregroundStyle(.secondary).multilineTextAlignment(.center)
                     }.padding(.vertical, 25).frame(maxWidth: .infinity)
                 } else {
@@ -43,7 +43,7 @@ import PDFRecorderCore
             Button { model.chooseTake(take) } label: {
                 HStack(alignment: .top, spacing: 8) {
                     Image(systemName: previewing ? "headphones.circle.fill" : "waveform.circle")
-                        .font(.title3).foregroundStyle(previewing ? Color.accentColor : Color.secondary)
+                        .font(.system(size: 17)).foregroundStyle(previewing ? StudioTheme.text : StudioTheme.faint)
                     VStack(alignment: .leading, spacing: 5) {
                         HStack {
                             Text(take.name?.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty == false ? take.displayName : "Take \(number)")
@@ -78,8 +78,8 @@ import PDFRecorderCore
                 }
             }.font(.caption).buttonStyle(.borderless)
         }.padding(11)
-            .background(previewing ? Color.accentColor.opacity(0.07) : Color.primary.opacity(0.035), in: RoundedRectangle(cornerRadius: 9))
-            .overlay(RoundedRectangle(cornerRadius: 9).strokeBorder(previewing ? Color.accentColor.opacity(0.6) : Color.primary.opacity(0.06)))
+            .background(previewing ? StudioTheme.elevated : StudioTheme.surface, in: RoundedRectangle(cornerRadius: 7))
+            .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(previewing ? Color.white.opacity(0.3) : StudioTheme.border))
             .contextMenu {
                 Button("Use in Export") { model.useTake(take) }.disabled(model.mode != .idle)
                 Button("Compare with Current Take") { model.comparisonTakeID = take.id }.disabled(previewing)
@@ -99,7 +99,7 @@ import PDFRecorderCore
     @State private var markerLabel = ""
     @State private var showTrimming = false
     @State private var showVolume = false
-    @State private var showReview = true
+    @State private var showReview = false
     init(model: AppModel, take: Take) {
         self.model = model; self.take = take
         _name = State(initialValue: take.name ?? "")
@@ -125,9 +125,9 @@ import PDFRecorderCore
                 ForEach(TakeReviewStatus.allCases) { status in Text(status.label).tag(status) }
             }.font(.caption).disabled(!editable)
             comparison
-            DisclosureGroup("Trim beginning & end", isExpanded: $showTrimming) { trimming.padding(.top, 8) }.font(.callout.weight(.medium))
-            DisclosureGroup("Volume & matching", isExpanded: $showVolume) { volume.padding(.top, 8) }.font(.callout.weight(.medium))
-            DisclosureGroup("Loops & review markers", isExpanded: $showReview) { review.padding(.top, 8) }.font(.callout.weight(.medium))
+            DisclosureGroup("Trim take", isExpanded: $showTrimming) { trimming.padding(.top, 8) }.font(.callout.weight(.medium))
+            DisclosureGroup("Volume", isExpanded: $showVolume) { volume.padding(.top, 8) }.font(.callout.weight(.medium))
+            DisclosureGroup("Loops & markers", isExpanded: $showReview) { review.padding(.top, 8) }.font(.callout.weight(.medium))
             Button("Move Take to Trash", systemImage: "trash", role: .destructive) { model.deleteTake(take) }
                 .font(.caption).buttonStyle(.borderless).disabled(!editable)
         }.onChange(of: take) { _, value in
@@ -174,7 +174,7 @@ import PDFRecorderCore
                         value.trimStart = start; value.trimEnd = end
                         if let loop = value.loopRange, loop.start < start || loop.end > end { value.loopRange = nil }
                     }
-                }.buttonStyle(.borderedProminent).disabled(trimEnd - trimStart < 0.05)
+                }.buttonStyle(StudioButtonStyle(kind: .primary)).disabled(trimEnd - trimStart < 0.05)
             }.font(.caption)
             Text("The source stays intact. Playback and exports use the kept range.").font(.caption2).foregroundStyle(.secondary)
         }.fontWeight(.regular).disabled(!editable)

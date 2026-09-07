@@ -22,7 +22,9 @@ extension AppModel {
     }
     func rememberWorkspace() {
         guard let manifest, let projectURL else { return }
-        var item = RecentProject(manifest: manifest, url: projectURL, workspace: .init(page: pageIndex, viewport: scene.viewport))
+        rememberDocumentPosition()
+        let positions = Dictionary(uniqueKeysWithValues: documentWorkspaces.map { ($0.key.uuidString, $0.value) })
+        var item = RecentProject(manifest: manifest, url: projectURL, workspace: .init(page: pageIndex, viewport: scene.viewport, documents: positions))
         if let old = recentProjects.first(where: { $0.id == item.id }) { item.pinned = old.pinned; item.previewName = old.previewName }
         // Do not create a decrypted thumbnail cache for an encrypted PDF.
         if pdf?.isEncrypted == false, let image = thumbnail(pageIndex), let data = image.tiffRepresentation,
@@ -50,6 +52,7 @@ extension AppModel {
         guard mode == .idle, flushMetadata() else { return }
         rememberWorkspace(); stopPlayback(); reviewTask?.cancel(); ocrGeneration = UUID(); ocrTask?.cancel(); ocrTask = nil; ocrProgress = nil
         manifest = nil; pdf = nil; artwork = nil; projectURL = nil
+        loadedPDFDocuments = [:]; documentPasswords = [:]; documentWorkspaces = [:]; ocrPages = [:]
     }
     func updateActivity() {
         let active = mode == .recording || mode == .paused || mode == .starting || mode == .stopping || mode == .exporting || mode == .checkingMicrophone
@@ -134,27 +137,39 @@ extension AppModel {
         do { self.manifest = try ProjectRecovery.recoverSetAside(name, manifest: manifest, at: root); loadPage(pageIndex); refreshStorage() } catch { errorMessage = error.localizedDescription }
     }
     func startOCR() {
-        guard mode == .idle, ocrTask == nil, let root = projectURL, let manifest else { return }
-        let source = root.appendingPathComponent(manifest.sourcePDF), password = self.password
-        let generation = UUID(); ocrGeneration = generation
-        ocrProgress = 0
+        guard mode == .idle, ocrTask == nil, let root = projectURL, let source = currentDocument,
+              let range = manifest?.pageRange(for: source.id) else { return }
+        let url = root.appendingPathComponent(source.path), password = documentPasswords[source.id]
+        let cache = ocrCacheDirectory(for: source, at: root)
+        let generation = UUID(); ocrGeneration = generation; ocrProgress = 0
         ocrTask = Task {
+            defer {
+                if ocrGeneration == generation {
+                    ocrGeneration = UUID(); ocrProgress = nil; ocrTask = nil
+                }
+            }
             do {
-                let pages = try await OCRReading.recognize(pdfURL: source, password: password, cacheDirectory: root.appendingPathComponent("reading")) { value in
+                let pages = try await OCRReading.recognize(pdfURL: url, password: password, cacheDirectory: cache) { value in
                     Task { @MainActor in if self.ocrGeneration == generation { self.ocrProgress = value } }
                 }
                 guard projectURL == root, ocrGeneration == generation else { return }
-                ocrPages = pages; indexedPageText = []; scheduleSearch(); status = "Scanned page text is ready to search and copy"
+                for (index, content) in pages where (0..<source.pageCount).contains(index) { ocrPages[range.lowerBound + index] = content }
+                indexedPageText = []; scheduleSearch(); status = "Text recognized in \(source.title)"
             } catch is CancellationError { if ocrGeneration == generation { status = "Text recognition cancelled" } }
             catch { if ocrGeneration == generation { errorMessage = error.localizedDescription } }
-            if ocrGeneration == generation { ocrProgress = nil; ocrTask = nil }
         }
     }
-    var pageLabel: String { pdf?.page(at: pageIndex).map { PDFReading.label(for: $0, index: pageIndex) } ?? "\(pageIndex + 1)" }
+    var pageLabel: String { pdfPage(at: pageIndex).map { PDFReading.label(for: $0, index: currentDocumentPageNumber - 1) } ?? "\(currentDocumentPageNumber)" }
     func navigate(toLabel label: String) {
         let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
-        if let pdf, let index = (0..<pdf.pageCount).first(where: { pdf.page(at: $0)?.label == label }) { navigate(to: index) }
-        else if let number = Int(label) { navigate(to: number - 1) }
+        if let index = currentDocumentPages.first(where: { pdfPage(at: $0)?.label == label }) { navigate(to: index) }
+        else if let number = Int(label), (1...max(1, currentDocumentPages.count)).contains(number) { navigate(to: currentDocumentPages.lowerBound + number - 1) }
     }
-    var outlineItems: [PDFOutlineItem] { pdf.map(PDFReading.outline(in:)) ?? [] }
+    var outlineItems: [PDFOutlineItem] {
+        guard let pdf else { return [] }
+        let offset = currentDocumentPages.lowerBound
+        return PDFReading.outline(in: pdf).map { item in
+            PDFOutlineItem(id: "\(currentDocumentID?.uuidString ?? "")-\(item.id)", title: item.title, page: item.page + offset, depth: item.depth)
+        }
+    }
 }

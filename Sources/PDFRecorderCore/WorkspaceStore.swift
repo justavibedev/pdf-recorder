@@ -12,10 +12,19 @@ public struct RecorderPreferences: Codable, Equatable, Sendable {
     public init() {}
 }
 
+public struct DocumentWorkspace: Codable, Equatable, Sendable {
+    public var page: Int
+    public var viewport: Viewport
+    public init(page: Int = 0, viewport: Viewport = Viewport()) { self.page = page; self.viewport = viewport }
+}
+
 public struct ProjectWorkspace: Codable, Equatable, Sendable {
     public var page = 0
     public var viewport = Viewport()
-    public init(page: Int = 0, viewport: Viewport = Viewport()) { self.page = page; self.viewport = viewport }
+    public var documents: [String: DocumentWorkspace]?
+    public init(page: Int = 0, viewport: Viewport = Viewport(), documents: [String: DocumentWorkspace]? = nil) {
+        self.page = page; self.viewport = viewport; self.documents = documents
+    }
 }
 
 public struct RecentProject: Codable, Identifiable, Equatable, Sendable {

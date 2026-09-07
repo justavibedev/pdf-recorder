@@ -22,9 +22,16 @@ Coverage includes:
 - A simulated 30-minute sample clock with pauses; source-time trims, loops,
   markers, A/B preview independent of export selection, and presentation
   pause/resume with the remaining page queue intact.
-- Portable formats v1/v2/v3, preferences and workspace round trips, take Trash,
+- Portable formats v1/v2/v3/v4, preferences and workspace round trips, take Trash,
   snapshot protection, missing-media isolation/retry, partial recovery and
   Save As rescue from a read-only original project.
+- Multiple source PDFs: ordered batch import, rollback before the manifest commit,
+  stable existing page/take indexes, mixed source geometry, document-local range
+  and chapter selection, per-document page/viewport restoration, source-preserving
+  portable saves, and snapshot restoration that retains later appended PDFs.
+- Search failure clears its busy indicator without publishing a partial index.
+  Save As waits for cancelled OCR/cache writers and review/search readers before
+  copying or deleting recovery storage; failed and cancelled saves preserve work.
 - Waveform silence/clipping, gain, volume matching, fades and source preservation;
   playback cache reuse/invalidation/eviction, interrupted preparation, cleanup
   during preparation and recovery of scrubbing after cancelled/failed preparation.
@@ -52,12 +59,23 @@ PDFRECORDER_TEST_ARTIFACTS="$PWD/build/QA" swift test
 
 ## Interactive acceptance checklist
 
-These checks remain open. Application launch and microphone testing were declined
-by the user, so agent verification uses the automated boundaries above. A passing
-synthetic clock test does not establish real microphone latency or drift.
+These checks are tracked separately from automated tests. Interactive UI review
+requires a deliberate app launch; audio input and audible playback are separate
+checks. No physical microphone or long-session result is implied by a passing
+synthetic clock test.
 
 - [ ] Open at the minimum size and in Split View; independently collapse sidebars,
-      expand notes, and check light/dark mode and Reduce Motion.
+      expand notes, and check the dark interface with Reduce Motion.
+- [ ] Multi-select three PDFs or drop them together. Switch document tabs, navigate
+      each source, and verify titles, thumbnails, local page numbers, and last
+      viewports. Add another PDF without disturbing existing notes or takes.
+- [ ] Mix portrait, landscape, rotated, and mixed-size source PDFs. Save and reopen
+      the project after moving the original files. Verify every source remains
+      readable, with unchanged geometry and independently selected takes.
+- [ ] Search and use outlines in each document. Check current-PDF OCR caches,
+      document keyboard shortcuts, and locked document navigation during a take.
+- [ ] Export all documents, one document, a current-document range, and a chapter;
+      inspect cross-document page order, page geometry, and unique batch filenames.
 - [ ] Complete the workflow using the keyboard. Check command search, text-editing
       Undo/Redo, canvas focus, page-number entry and presentation-clicker keys.
 - [ ] Use VoiceOver on PDF text, take cards, waveform controls and recording-state
@@ -95,15 +113,30 @@ synthetic clock test does not establish real microphone latency or drift.
       measure audio/visual alignment, targeting less than 100 ms at both ends.
 - [ ] Run on Intel hardware and the minimum supported macOS 14 version.
 
-## Current evidence
+## Evidence ledger
 
-The 0.3.0 implementation passed **76 automated tests** and a universal Release
-build locally on Apple Silicon with Xcode 26.6. Both `arm64` and `x86_64` slices
-are present; strict deep signature verification passes. The ad-hoc signed app
-occupies approximately **12 MB** on disk and its ZIP **4 MB**, excluding projects.
-The macOS CI workflow runs the same tests, universal build and signature checks;
-consult the run for the commit being reviewed.
+The 0.4.0 development preview passes **95 automated tests** and a universal
+Release build locally on Apple Silicon with Xcode 26.6. This includes nine
+dedicated multi-PDF core tests, six headless multi-PDF workflow tests, and four
+Save As/OCR lifecycle tests.
+Both `arm64` and `x86_64` slices are present; strict deep signature verification
+passes. The ad-hoc signed app occupies approximately **14 MB** on disk and its
+ZIP **4 MB**, excluding projects. The macOS CI workflow runs the full suite,
+universal build and signature checks; consult the run for the exact commit
+being reviewed.
 
-Intel is cross-compiled, not hardware-tested. Interactive UI, VoiceOver, physical
-microphone, multi-display and real 30-minute checks remain pending. See the
+Interactive review of the 0.4 app is authorized but remains pending: the launch
+attempt could not proceed while the host Mac was locked. Microphone recording
+has not been authorized or performed during implementation.
+
+Intel is cross-compiled, not hardware-tested. VoiceOver, physical microphone,
+multi-display and real 30-minute checks remain pending. See the
 [implementation ledger](IMPLEMENTATION-0.3.md) for each requirement.
+
+For local visual review, the demonstration documents in `build/Demo Documents`
+contain six deliberately generated pages: portrait biology notes, a landscape
+statistics exercise with invented data, and a speaking worksheet that changes
+page size. They contain no microphone recordings or private material. The PDFs
+were authored with Swift/CoreGraphics, rendered through Poppler, and visually
+checked for clipping, spacing, readable labels, and page geometry. These local
+demo artifacts are not bundled into the app or committed as source assets.

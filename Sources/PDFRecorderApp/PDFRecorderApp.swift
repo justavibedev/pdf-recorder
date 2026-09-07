@@ -7,14 +7,17 @@ import PDFRecorderCore
     var body: some SwiftUI.Scene {
         Window("PDF Recorder", id: "main") {
             ContentView(model: model)
-                .onAppear { delegate.model = model }
-                .onOpenURL { model.open($0) }
+                .preferredColorScheme(.dark)
+                .onAppear { delegate.model = model; NSApp.appearance = NSAppearance(named: .darkAqua) }
+                .onOpenURL { model.openURLs([$0]) }
         }
         .defaultSize(width: 1280, height: 820)
         .windowStyle(.titleBar)
+        .windowToolbarStyle(.unifiedCompact)
         .commands {
             CommandGroup(replacing: .newItem) {
-                Button("Open PDF or Project…", action: model.openPanel).keyboardShortcut("o").disabled(model.mode != .idle)
+                Button("Open PDFs or Project…", action: model.openPanel).keyboardShortcut("o").disabled(model.mode != .idle)
+                Button("Add PDFs…", action: model.addPDFPanel).keyboardShortcut("o", modifiers: [.command, .option]).disabled(model.mode != .idle)
                 Button("Project Library", action: model.showLibrary).keyboardShortcut("o", modifiers: [.command, .shift]).disabled(model.mode != .idle)
             }
             CommandGroup(replacing: .saveItem) {
@@ -27,6 +30,8 @@ import PDFRecorderCore
                 Button("Find in PDF and Notes") { model.focusSearchToken += 1 }.keyboardShortcut("f").disabled(model.manifest == nil)
                 Button("Show / Hide Pages") { model.focusMode.toggle() }.keyboardShortcut("1", modifiers: [.command, .option])
                 Button("Show / Hide Inspector") { model.hideInspector.toggle() }.keyboardShortcut("2", modifiers: [.command, .option])
+                Button("Previous Document") { model.cycleDocument(-1) }.keyboardShortcut(.leftArrow, modifiers: [.command, .option]).disabled(!model.canNavigate || model.pdfDocuments.count < 2)
+                Button("Next Document") { model.cycleDocument(1) }.keyboardShortcut(.rightArrow, modifiers: [.command, .option]).disabled(!model.canNavigate || model.pdfDocuments.count < 2)
                 Toggle("Larger Controls", isOn: $model.largeControls)
                 Divider()
                 Button("Recognize Scanned Text", action: model.startOCR).disabled(model.manifest == nil || model.mode != .idle || model.ocrTask != nil)
@@ -40,8 +45,8 @@ import PDFRecorderCore
                 Divider()
                 Button("Play / Pause Take") { model.play() }.keyboardShortcut(.space, modifiers: .command).disabled(model.selectedTake == nil || model.isRecording)
                 Button("Stop Playback", action: model.stopPlayback).disabled(model.player == nil && model.mode != .loadingPlayback)
-                Button("Previous Page") { model.navigate(to: model.pageIndex - 1) }.keyboardShortcut(.leftArrow, modifiers: .command).disabled(!model.canNavigate)
-                Button("Next Page") { model.navigate(to: model.pageIndex + 1) }.keyboardShortcut(.rightArrow, modifiers: .command).disabled(!model.canNavigate)
+                Button("Previous Page") { model.navigatePage(-1) }.keyboardShortcut(.leftArrow, modifiers: .command).disabled(!model.canNavigate || model.pageIndex == model.currentDocumentPages.lowerBound)
+                Button("Next Page") { model.navigatePage(1) }.keyboardShortcut(.rightArrow, modifiers: .command).disabled(!model.canNavigate || model.pageIndex + 1 >= model.currentDocumentPages.upperBound)
             }
             CommandMenu("Presenting") {
                 Button("Audience Display", action: model.showAudienceDisplay).keyboardShortcut("d", modifiers: [.command, .shift]).disabled(model.manifest == nil)
@@ -65,6 +70,7 @@ import PDFRecorderCore
     func applicationShouldTerminateAfterLastWindowClosed(_ sender: NSApplication) -> Bool { true }
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
         guard let model else { return .terminateNow }
+        if model.mode == .savingProject { return .terminateCancel }
         guard model.flushMetadata() else { return .terminateCancel }
         model.rememberWorkspace(); model.savePreferences(); model.ocrTask?.cancel()
         if model.mode == .rehearsing { model.finishRehearsal() }

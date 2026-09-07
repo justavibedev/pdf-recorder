@@ -38,9 +38,12 @@
 		A528C34C105FDC299B5F7C99 /* EventLogReader.swift in Sources */ = {isa = PBXBuildFile; fileRef = 116415B2DC8B74F87557B866 /* EventLogReader.swift */; };
 		A67EBDA922C3EA9D9A977055 /* Rehearsal.swift in Sources */ = {isa = PBXBuildFile; fileRef = 578C0F4FC26458256AEA4FDA /* Rehearsal.swift */; };
 		BBFB63D68AB90894871C48F4 /* TakeReviewView.swift in Sources */ = {isa = PBXBuildFile; fileRef = A440FD42E0B0DC031B99D08B /* TakeReviewView.swift */; };
+		C2BBB38C44099AFAC63FA44E /* StudioTheme.swift in Sources */ = {isa = PBXBuildFile; fileRef = 56DD53E0916725196F3A746A /* StudioTheme.swift */; };
+		CFB51F55EDC0857FD87098A8 /* AppModel+Documents.swift in Sources */ = {isa = PBXBuildFile; fileRef = E19E3CA6DE1F4246E3E3DE08 /* AppModel+Documents.swift */; };
 		D81F4A06112C03E902B33536 /* WorkspaceStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = 2E1FE9EB9B9E64BC3CE96677 /* WorkspaceStore.swift */; };
 		DBB031F1CC5AE0B885BDCBDB /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796DAC5FEBC44BF536768740 /* AppModel.swift */; };
 		DF0CED3E6C8D135899BF0320 /* ProjectRecovery.swift in Sources */ = {isa = PBXBuildFile; fileRef = 8E4A4B4D55F9043687E926DF /* ProjectRecovery.swift */; };
+		E21F49785B6A4D0A7C880F5C /* ProjectPDFStorage.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6669B5B32695A0D86529D710 /* ProjectPDFStorage.swift */; };
 		E57D8632B934532471672C69 /* PageReading.swift in Sources */ = {isa = PBXBuildFile; fileRef = A339DE0C78F0E62A41EE9C1C /* PageReading.swift */; };
 		E74BC804402256F0702514A0 /* AppModel+Workspace.swift in Sources */ = {isa = PBXBuildFile; fileRef = 343B490FF9C7C8691FB651B0 /* AppModel+Workspace.swift */; };
 		EF69E8362212D7D12AB22401 /* PDFRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0528E446E88A316E693B0863 /* PDFRecorderApp.swift */; };
@@ -88,9 +91,11 @@
 		3B0497A1E2E6CAE18397646B /* KeyboardCommands.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = KeyboardCommands.swift; sourceTree = "<group>"; };
 		41B71397F74B4AA9B5017516 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4CD37DF5624E20911ABD65C9 /* PresenterNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresenterNotesView.swift; sourceTree = "<group>"; };
+		56DD53E0916725196F3A746A /* StudioTheme.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = StudioTheme.swift; sourceTree = "<group>"; };
 		578C0F4FC26458256AEA4FDA /* Rehearsal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rehearsal.swift; sourceTree = "<group>"; };
 		60A0FF5AEA1289640ECACD63 /* PlaybackAudioCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackAudioCache.swift; sourceTree = "<group>"; };
 		60B856C02130B46ED9D0952E /* BatchExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchExport.swift; sourceTree = "<group>"; };
+		6669B5B32695A0D86529D710 /* ProjectPDFStorage.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectPDFStorage.swift; sourceTree = "<group>"; };
 		6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRenderer.swift; sourceTree = "<group>"; };
 		6C5FB31ECF059545D6616625 /* AudioExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioExporter.swift; sourceTree = "<group>"; };
 		6D25165232D58181C22160D3 /* THIRD_PARTY_NOTICES.md */ = {isa = PBXFileReference; lastKnownFileType = net.daringfireball.markdown; path = THIRD_PARTY_NOTICES.md; sourceTree = "<group>"; };
@@ -113,6 +118,7 @@
 		D6B6F00485C1F8A0EC4101E4 /* PresenterDisplay.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresenterDisplay.swift; sourceTree = "<group>"; };
 		DA24B2B859DA078ACD183984 /* PDFRecorder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PDFRecorder.entitlements; sourceTree = "<group>"; };
 		DE35BDCAD7A332A93E712CE2 /* VideoExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExporter.swift; sourceTree = "<group>"; };
+		E19E3CA6DE1F4246E3E3DE08 /* AppModel+Documents.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = "AppModel+Documents.swift"; sourceTree = "<group>"; };
 		E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFCanvas.swift; sourceTree = "<group>"; };
 		F05E9C613C480DE156D651FC /* MediaOptions.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MediaOptions.swift; sourceTree = "<group>"; };
 		F1DC3A882786B88AF2D1ECF3 /* LICENSE */ = {isa = PBXFileReference; path = LICENSE; sourceTree = "<group>"; };
@@ -143,6 +149,7 @@
 				A339DE0C78F0E62A41EE9C1C /* PageReading.swift */,
 				60A0FF5AEA1289640ECACD63 /* PlaybackAudioCache.swift */,
 				1103C428D7B240A01C68945C /* PresentationTools.swift */,
+				6669B5B32695A0D86529D710 /* ProjectPDFStorage.swift */,
 				8E4A4B4D55F9043687E926DF /* ProjectRecovery.swift */,
 				D4806B2338C0803B2990FD3A /* ProjectStore.swift */,
 				578C0F4FC26458256AEA4FDA /* Rehearsal.swift */,
@@ -178,6 +185,7 @@
 			isa = PBXGroup;
 			children = (
 				796DAC5FEBC44BF536768740 /* AppModel.swift */,
+				E19E3CA6DE1F4246E3E3DE08 /* AppModel+Documents.swift */,
 				7D4143F816ADD8EF65A98956 /* AppModel+Export.swift */,
 				D416269B82083D03144ED3C5 /* AppModel+Presenter.swift */,
 				0E651BCAD676D96163AE3310 /* AppModel+Review.swift */,
@@ -195,6 +203,7 @@
 				4CD37DF5624E20911ABD65C9 /* PresenterNotesView.swift */,
 				82973A801FEBFA3909169D91 /* RareComponents.swift */,
 				2E71B8C0DD8A82C469959F89 /* StorageCenterView.swift */,
+				56DD53E0916725196F3A746A /* StudioTheme.swift */,
 				A440FD42E0B0DC031B99D08B /* TakeReviewView.swift */,
 				A95F92B26B47B3B8E6F8DFF4 /* TeleprompterText.swift */,
 				6D9CC91086F64603698799F1 /* WaveformTimelineView.swift */,
@@ -310,6 +319,7 @@
 				E57D8632B934532471672C69 /* PageReading.swift in Sources */,
 				4E0F0BCC4508A2595687C57B /* PlaybackAudioCache.swift in Sources */,
 				50D84E61FBCEEFE967F39453 /* PresentationTools.swift in Sources */,
+				E21F49785B6A4D0A7C880F5C /* ProjectPDFStorage.swift in Sources */,
 				DF0CED3E6C8D135899BF0320 /* ProjectRecovery.swift in Sources */,
 				2F60CA1EDE6D3DB03CA04AF6 /* ProjectStore.swift in Sources */,
 				A67EBDA922C3EA9D9A977055 /* Rehearsal.swift in Sources */,
@@ -323,6 +333,7 @@
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				CFB51F55EDC0857FD87098A8 /* AppModel+Documents.swift in Sources */,
 				26B8E25B9D4D038DC489D489 /* AppModel+Export.swift in Sources */,
 				11186205EC87FC7C2EC7F4C9 /* AppModel+Presenter.swift in Sources */,
 				0334ADDD1C86C29C6E0CB99D /* AppModel+Review.swift in Sources */,
@@ -338,6 +349,7 @@
 				F071C5938524CF91CE0713B5 /* PresenterNotesView.swift in Sources */,
 				6B8CCE55ADC2960DFAC03CE8 /* RareComponents.swift in Sources */,
 				1A9CA9BA99C6256CD8BBB8B2 /* StorageCenterView.swift in Sources */,
+				C2BBB38C44099AFAC63FA44E /* StudioTheme.swift in Sources */,
 				BBFB63D68AB90894871C48F4 /* TakeReviewView.swift in Sources */,
 				102E8BEB981EA7B73F6229EF /* TeleprompterText.swift in Sources */,
 				4C635835D99B619F774BB681 /* WaveformTimelineView.swift in Sources */,

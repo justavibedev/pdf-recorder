@@ -16,7 +16,7 @@ final class PresentationTests: XCTestCase {
         try ProjectStore.save(manifest, at: project)
         let original = try Data(contentsOf: project.appendingPathComponent("manifest.json"))
         var upgraded = try ProjectStore.load(at: project)
-        XCTAssertEqual(upgraded.version, 3)
+        XCTAssertEqual(upgraded.version, 4)
         XCTAssertEqual(upgraded.pages[1].selectedTake?.id, take.id)
         XCTAssertNil(upgraded.pages[1].notes)
         XCTAssertEqual(try Data(contentsOf: project.appendingPathComponent("manifest.json")), original)

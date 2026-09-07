@@ -183,15 +183,56 @@ public struct PageRecord: Codable, Equatable, Sendable {
     }
 }
 
+public struct ProjectPDFDocument: Codable, Equatable, Identifiable, Sendable {
+    public var id: UUID
+    public var title: String
+    public var path: String
+    public var pageCount: Int
+    public init(id: UUID = UUID(), title: String, path: String, pageCount: Int) {
+        self.id = id; self.title = title; self.path = path; self.pageCount = pageCount
+    }
+}
+
 public struct ProjectManifest: Codable, Equatable, Sendable {
-    public var version = 3
+    public var version = 4
     public var id = UUID()
     public var title: String
     public var sourcePDF = "source.pdf"
+    /// Ordered source documents; omitted by older, single-PDF projects.
+    public var documents: [ProjectPDFDocument]?
     public var matchLoudness: Bool?
     public var pages: [PageRecord]
     public init(title: String, pageCount: Int) {
         self.title = title; pages = Array(repeating: PageRecord(), count: pageCount)
+    }
+    public var pdfDocuments: [ProjectPDFDocument] {
+        documents ?? [ProjectPDFDocument(id: id, title: title, path: sourcePDF, pageCount: pages.count)]
+    }
+    /// Documents occupy stable, append-only ranges in the existing page/take list.
+    public func pageRange(for documentID: UUID) -> Range<Int>? {
+        var start = 0
+        for document in pdfDocuments {
+            let (end, overflow) = start.addingReportingOverflow(document.pageCount)
+            guard document.pageCount > 0, !overflow, end <= pages.count else { return nil }
+            if document.id == documentID { return start..<end }
+            start = end
+        }
+        return nil
+    }
+    public func document(containing globalPage: Int) -> ProjectPDFDocument? {
+        guard pages.indices.contains(globalPage) else { return nil }
+        var start = 0
+        for document in pdfDocuments {
+            let (end, overflow) = start.addingReportingOverflow(document.pageCount)
+            guard document.pageCount > 0, !overflow, end <= pages.count else { return nil }
+            if globalPage < end { return document }
+            start = end
+        }
+        return nil
+    }
+    public func localPageIndex(globalPage: Int) -> Int? {
+        guard let document = document(containing: globalPage), let range = pageRange(for: document.id) else { return nil }
+        return globalPage - range.lowerBound
     }
     public var selectedTakes: [(page: Int, take: Take)] {
         pages.enumerated().compactMap { index, page in page.selectedTake.map { (index, $0) } }

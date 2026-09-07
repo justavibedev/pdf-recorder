@@ -1,10 +1,10 @@
 # PDF Recorder
 
-A native, offline macOS app for recording PDF presentations one page at a time.
+A native, offline macOS workspace for recording PDF presentations one page at a time.
 
-Prepare notes, rehearse, then record your voice, pointer, pen, highlights, and zoom/pan. Keep multiple takes per page, choose your favorites, and export one MP4 or an audio study file. Built for students, free for everyone.
+Bring your lecture PDFs together, prepare notes, and rehearse. Record your voice, pointer, pen, highlights, and zoom/pan. Keep multiple takes per page, choose your favorites, and export one MP4 or an audio study file. Built for students, free for everyone.
 
-**0.3 development preview:** builds as a native universal Mac app. Core and synthetic media tests run locally and in CI. Live microphone, UI, and long-session acceptance checks remain open. This is not yet a notarized public release.
+**0.4 development preview:** multiple PDFs in one portable project, with a compact native studio interface. Core and synthetic media tests run locally and in CI. Physical microphone and long-session acceptance checks remain open. See the [validation ledger](docs/VALIDATION.md) for current evidence. This is not yet a notarized public release.
 
 ## What you can do
 
@@ -14,9 +14,24 @@ Prepare notes, rehearse, then record your voice, pointer, pen, highlights, and z
 | Zoom and pan while explaining | Scrub, replay, erase, and undo marks | H.264 video with AAC audio |
 | Pause without adding dead time | Choose an earlier take at any time | Portable editable project packages |
 | Select a microphone and see its level | Preview selected takes in PDF order | Automatic saving and crash recovery |
+| Add several PDFs to one project | Switch documents without losing your place | Export one document or the whole project |
 
 PDFs can be scanned, portrait, landscape, rotated, mixed-size, or password-protected.
-Existing PDF annotations stay visible. The source file is never changed.
+Existing PDF annotations stay visible. Every source file is copied unchanged.
+
+## Multiple PDFs, one workspace
+
+Select several PDFs when opening, drop them together, or use **Add PDFs** in an
+existing project. Document tabs keep lecture decks, readings, and handouts easy
+to switch between. Each document keeps its own pages, notes, takes, last page,
+and viewport. Page navigation, search results, outlines, and page-number entry
+follow the current document.
+
+PDFs keep their original dimensions and contents. Adding documents appends their
+pages without moving existing recordings. Saving a `.pdfrecorder` package keeps
+all source PDFs and recordings together, so the originals can move elsewhere.
+Export **All documents**, **Current document**, a page, a chapter, or a range in
+the current PDF. Combined output follows document import order, then page order.
 
 ## For students and presenters
 
@@ -25,7 +40,8 @@ Existing PDF annotations stay visible. The source file is never changed.
   corrections, loop A–B sections, and compare takes at the same position.
 - **Choose what you share.** Auditioning a take never changes the export selection.
   Use **Use in Export** when ready. Export included pages, the current page,
-  a custom range, or the current PDF chapter, together or as separate files.
+  a custom range, the current PDF or chapter, or all documents, together or as
+  separate files. Range numbers are positions within the current PDF.
 - **Better audio.** An explicit **Check Microphone** action reports silence,
   quiet input, and clipping without saving audio. Optional speech-level matching,
   per-take volume, and short edge fades apply to playback and export.
@@ -42,7 +58,7 @@ Existing PDF annotations stay visible. The source file is never changed.
   add text labels, erase, undo, redo, or clear marks in one undoable action.
   PDF vectors render sharply at the current zoom and output resolution.
 - **Continue later.** Recent and pinned projects show previews and progress;
-  reopen at your last page and viewport. Microphone, countdown, playback speed,
+  reopen at your last page and viewport in each PDF. Microphone, countdown, playback speed,
   notes size, larger controls, and sidebar settings persist between launches.
 - **Recover your work.** Deleted takes go to project Trash. The Storage & Recovery
   center shows disk use, unused takes, unfinished recordings, unavailable files,
@@ -57,18 +73,19 @@ and search/selection overlays never enter audio or video exports.
 
 ## A simple workflow
 
-1. **Open a PDF** using **⌘O**, drag and drop, or your recent-project library.
+1. **Open PDFs** using **⌘O**, drag and drop, or your recent-project library.
+   Multi-select lecture PDFs, or add more later with **⌘⌥O**. Use the tabs to switch.
 2. **Prepare.** Add notes and targets. Optionally recognize scanned text, practice,
    or open the audience display from **Presenting**.
 3. **Record.** Select a microphone in **Recording & audio**. An optional microphone
-   check saves no audio. Press **Record Page**; capture begins after your countdown.
+   check saves no audio. Press **Record**; capture begins after your countdown.
 4. **Review.** Stop to autosave. Listen to takes, trim the kept range, add review
    markers, and compare A/B. Choose **Use in Export** for the version you want.
 5. **Save and share.** Save Project makes a portable `.pdfrecorder` package.
-   Export MP4 or M4A, choose pages and quality, and review included/skipped counts.
+   Export MP4 or M4A, choose documents/pages and quality, and review included/skipped counts.
    Batch output appears only when every page succeeds.
 
-Page navigation locks during recording. Pausing freezes the scene and excludes
+Page and document navigation lock during recording. Pausing freezes the scene and excludes
 pause time. Every new take starts with clean app-created marks and the current
 viewport. Your earlier takes and source PDF remain intact.
 
@@ -116,7 +133,9 @@ xcodegen generate
 
 | Action | Shortcut |
 | --- | --- |
-| Open PDF or project | ⌘O |
+| Open PDFs or project | ⌘O |
+| Add PDFs | ⌘⌥O |
+| Previous / next document | ⌘⌥← / ⌘⌥→ |
 | Save Project As | ⌘S |
 | New take | ⌘⇧R |
 | Pause / resume recording | ⌘⇧P |
@@ -146,10 +165,11 @@ stays available when editing text; the canvas handles annotation Undo/Redo.
 
 ## Design and efficiency
 
-The interface uses native SwiftUI/AppKit controls with **SwiftUI adaptations of
-Rare UI's Folder Component and Step Player**, under its MIT license. It does not
-embed React, shadcn, or a web view. See [third-party notices](THIRD_PARTY_NOTICES.md).
-Animations respect Reduce Motion.
+The dark studio interface uses compact SwiftUI/AppKit controls, restrained borders,
+and a clear hierarchy inspired by shadcn. **SwiftUI adaptations of Rare UI's Folder
+Component and Step Player** are included under its MIT license. The app has no
+browser runtime. See [third-party notices](THIRD_PARTY_NOTICES.md). Animations
+respect Reduce Motion.
 
 Microphone sample counts drive the visual timeline. Audio streams to disk,
 recovery events append incrementally, and idle timers stop. A bounded set of
@@ -157,7 +177,8 @@ scene checkpoints accelerates backward seeking; export reads events in chunks
 one page at a time. Waveform analysis and export preparation run off the UI thread.
 PDF backgrounds cache the visible viewport at output resolution, with bounded
 caches for editor and audience displays. OCR uses Apple Vision on-device and
-caches each completed page with a source fingerprint.
+caches each completed page with a fingerprint of its source PDF. Adding documents
+retains their individual PDF files and uses bounded page-preview caches.
 
 Prepared playback audio is reused between listens and A/B comparisons. Its local
 disk cache retains at most three clips within 512 MiB, except that a single larger
@@ -191,10 +212,13 @@ takes they still reference.
 
 See [validation and the live checklist](docs/VALIDATION.md),
 [project format](docs/PROJECT_FORMAT.md), and [contributing](CONTRIBUTING.md).
-Synthetic media tests do not use the microphone. They verify MP4 dimensions,
+The 0.4 suite contains **95 automated tests**. Synthetic media tests do not use the microphone. They verify MP4 dimensions,
 frame rate, codec, duration, frame agreement with the renderer, and audio-only
 AAC export. Tests also cover search, bookmarks, export exclusions, countdown
-cancellation, and upgrading projects from formats v1/v2 to v3. Headless controller tests use
+cancellation, and upgrading single-PDF projects from formats v1/v2/v3 to v4.
+Multi-PDF tests cover import rollback, page geometry, document switching, stable
+take selection, individual workspace restoration, portable saves, snapshot
+restoration, and exports spanning source PDFs. Headless controller tests use
 fake playback and disabled device discovery; they never launch the app or use
 a microphone. See the [0.3 implementation ledger](docs/IMPLEMENTATION-0.3.md).
 

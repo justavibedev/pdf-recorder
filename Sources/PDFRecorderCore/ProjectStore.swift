@@ -36,6 +36,7 @@ public enum ProjectStore {
         return url
     }
     public static func create(at root: URL, source: URL, title: String, pageCount: Int) throws -> ProjectManifest {
+        guard (1...100_000).contains(pageCount) else { throw RecorderError.message("The PDF must contain between 1 and 100,000 pages.") }
         guard !FileManager.default.fileExists(atPath: root.path) else { throw RecorderError.message("A project already exists at this location.") }
         try FileManager.default.createDirectory(at: root, withIntermediateDirectories: true)
         do {
@@ -78,10 +79,9 @@ public enum ProjectStore {
     }
     public static func load(at root: URL, allowingMissingMedia: Bool = false) throws -> ProjectManifest {
         var m = try decode(ProjectManifest.self, from: root.appendingPathComponent("manifest.json"))
-        guard (1...3).contains(m.version) else { throw RecorderError.message("This project uses an unsupported format version (\(m.version)).") }
-        m.version = 3
-        guard !m.pages.isEmpty, m.pages.count <= 100_000, m.sourcePDF == "source.pdf" else { throw RecorderError.message("The project has an invalid page list or source path.") }
-        _ = try location(m.sourcePDF, in: root)
+        guard (1...4).contains(m.version) else { throw RecorderError.message("This project uses an unsupported format version (\(m.version)).") }
+        m.version = 4
+        try validateDocuments(m, at: root)
         var ids = Set<UUID>()
         for page in m.pages {
             if let target = page.targetSeconds, !target.isFinite || target < 0 || target > 86_400 {

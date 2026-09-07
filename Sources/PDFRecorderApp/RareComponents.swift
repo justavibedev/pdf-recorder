@@ -7,25 +7,25 @@ import PDFRecorderCore
 struct RareFolder: View {
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     @State private var hovered = false
-    private let blue = Color(red: 0.31, green: 0.69, blue: 0.99)
+    private let blue = Color(red: 0.22, green: 0.22, blue: 0.25)
     var body: some View {
         ZStack {
             RoundedRectangle(cornerRadius: 25).fill(blue.gradient).frame(width: 321, height: 270)
-                .overlay(RoundedRectangle(cornerRadius: 25).strokeBorder(.white.opacity(0.35)))
+                .overlay(RoundedRectangle(cornerRadius: 25).strokeBorder(.white.opacity(0.12)))
             ForEach(0..<3) { index in
                 folderCard
                     .rotationEffect(.degrees(rotation(index)))
                     .offset(x: [40.0, 3.0, -40.0][index], y: hovered ? [-30.0, -35.0, -44.0][index] : [-10.0, -20.0, -22.0][index])
             }
-            FolderFlap().fill(Color(red: 0.23, green: 0.60, blue: 0.91).opacity(0.85).gradient)
-                .overlay(FolderFlap().stroke(.white.opacity(0.35), lineWidth: 1))
+            FolderFlap().fill(Color(red: 0.16, green: 0.16, blue: 0.18).opacity(0.95).gradient)
+                .overlay(FolderFlap().stroke(.white.opacity(0.12), lineWidth: 1))
                 .frame(width: 321, height: 241)
                 .rotation3DEffect(.degrees(hovered ? -45 : -15), axis: (x: 1, y: 0, z: 0), anchor: .bottom, perspective: 0.6)
                 .offset(y: 16)
         }
         .frame(width: 321, height: 300)
-        .scaleEffect(0.53)
-        .frame(width: 190, height: 165)
+        .scaleEffect(0.42)
+        .frame(width: 152, height: 135)
         .onHover { hovered = $0 }
         .animation(reduceMotion ? nil : .interpolatingSpring(stiffness: 120, damping: 14), value: hovered)
         .accessibilityHidden(true)
@@ -33,7 +33,7 @@ struct RareFolder: View {
     private func rotation(_ index: Int) -> Double { hovered ? [14, -1, -9][index] : [10, 2, -5][index] }
     private var folderCard: some View {
         VStack(alignment: .leading, spacing: 15) {
-            HStack { Image(systemName: "waveform").foregroundStyle(.blue); Spacer(); Text("PDF").font(.system(size: 15, weight: .bold, design: .rounded)).foregroundStyle(.gray) }
+            HStack { Image(systemName: "waveform").foregroundStyle(Color(white: 0.35)); Spacer(); Text("PDF").font(.system(size: 15, weight: .bold, design: .rounded)).foregroundStyle(.gray) }
             Capsule().fill(Color.gray.opacity(0.22)).frame(height: 11)
             ForEach(0..<5) { index in
                 Capsule().fill(Color.gray.opacity(0.15)).frame(width: index == 4 ? 72 : 128, height: 6)

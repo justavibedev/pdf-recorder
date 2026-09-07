@@ -7,10 +7,13 @@ import PDFRecorderCore
 extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.project", conformingTo: .package) }
 
 @MainActor final class AppModel: ObservableObject {
-    enum Mode { case idle, countdown, starting, recording, paused, stopping, playing, rehearsing, exporting, loadingPlayback, checkingMicrophone }
+    enum Mode { case idle, countdown, starting, recording, paused, stopping, playing, rehearsing, exporting, loadingPlayback, checkingMicrophone, savingProject }
     enum ExportKind: String, CaseIterable { case video = "Video (MP4)", audio = "Audio only (M4A)" }
     @Published var manifest: ProjectManifest? { didSet { refreshPageMatches() } }
     @Published var pdf: PDFDocument?
+    var loadedPDFDocuments: [UUID: PDFDocument] = [:]
+    var documentPasswords: [UUID: String] = [:]
+    var documentWorkspaces: [UUID: DocumentWorkspace] = [:]
     @Published var projectURL: URL?
     @Published var pageIndex = 0
     @Published var artwork: PageArtwork?
@@ -153,7 +156,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     func thumbnail(_ index: Int) -> NSImage? {
         let key = NSNumber(value: index)
         if let image = thumbnailCache.object(forKey: key) { return image }
-        guard let page = pdf?.page(at: index) else { return nil }
+        guard let page = pdfPage(at: index) else { return nil }
         let image = page.thumbnail(of: CGSize(width: 220, height: 140), for: .cropBox)
         thumbnailCache.setObject(image, forKey: key)
         return image
@@ -161,8 +164,9 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     func openPanel() {
         guard mode == .idle else { return }
         let panel = NSOpenPanel(); panel.allowedContentTypes = [.pdf, .pdfRecorder]; panel.canChooseDirectories = false
-        panel.message = "Open a PDF or continue a PDF Recorder project."
-        if panel.runModal() == .OK, let url = panel.url { open(url) }
+        panel.allowsMultipleSelection = true
+        panel.message = "Choose one or more PDFs, or open a saved PDF Recorder project."
+        if panel.runModal() == .OK { openURLs(panel.urls) }
     }
     func unlock(_ document: PDFDocument) -> String? {
         guard document.isLocked else { return nil }
@@ -176,73 +180,84 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     }
     func open(_ url: URL) {
         guard mode == .idle, flushMetadata() else { return }
-        rememberWorkspace(); stopPlayback(); ocrGeneration = UUID(); ocrTask?.cancel(); ocrTask = nil; ocrProgress = nil
+        guard url.pathExtension.lowercased() == "pdfrecorder" else { openURLs([url]); return }
         do {
-            let root: URL
-            var newManifest: ProjectManifest
-            let document: PDFDocument
-            var newPassword: String?
-            if url.pathExtension.lowercased() == "pdfrecorder" {
-                root = url
-                do { newManifest = try ProjectStore.load(at: root) }
-                catch {
-                    let readable = try ProjectStore.load(at: root, allowingMissingMedia: true)
-                    let missing = readable.pages.flatMap(\.takes).filter { !ProjectRecovery.mediaExists($0, at: root) }
-                    guard !missing.isEmpty else { throw error }
-                    let alert = NSAlert(); alert.messageText = "Some take files are unavailable"
-                    alert.informativeText = "Open the healthy pages and keep metadata for \(missing.count) unavailable takes in the Recovery Center. Their files can be restored later."
-                    alert.addButton(withTitle: "Open Healthy Pages"); alert.addButton(withTitle: "Cancel")
-                    guard alert.runModal() == .alertFirstButtonReturn else { return }
-                    newManifest = try ProjectRecovery.isolateMissingMedia(readable, at: root)
-                }
-                guard let loaded = PDFDocument(url: try ProjectStore.location(newManifest.sourcePDF, in: root)) else { throw RecorderError.message("The source PDF is missing or corrupt.") }
-                newPassword = unlock(loaded)
-                guard !loaded.isLocked else { return }
-                guard loaded.pageCount == newManifest.pages.count else { throw RecorderError.message("The source PDF page count does not match this project.") }
-                document = loaded
-                if FileManager.default.fileExists(atPath: root.appendingPathComponent("active-take.json").path) {
-                    let alert = NSAlert(); alert.messageText = "Recover interrupted take?"
-                    alert.informativeText = "PDF Recorder found an unfinished recording. Recover its readable audio and saved gestures as a new take."
-                    alert.addButton(withTitle: "Recover Take"); alert.addButton(withTitle: "Later")
-                    if alert.runModal() == .alertFirstButtonReturn {
-                        do { newManifest = try ProjectStore.recover(at: root, manifest: newManifest) }
-                        catch { errorMessage = "The unfinished take could not be recovered: \(error.localizedDescription). Its files have been kept." }
-                    }
-                }
-            } else {
-                guard let loaded = PDFDocument(url: url) else { throw RecorderError.message("This file is not a readable PDF.") }
-                newPassword = unlock(loaded)
-                guard !loaded.isLocked else { return }
-                guard loaded.pageCount > 0 else { throw RecorderError.message("This PDF has no pages.") }
-                document = loaded
-                let title = url.deletingPathExtension().lastPathComponent
-                root = recoveryRoot.appendingPathComponent("\(title)-\(UUID().uuidString.prefix(8)).pdfrecorder")
-                newManifest = try ProjectStore.create(at: root, source: url, title: title, pageCount: loaded.pageCount)
+            var value: ProjectManifest
+            do { value = try ProjectStore.load(at: url) }
+            catch {
+                let readable = try ProjectStore.load(at: url, allowingMissingMedia: true)
+                let missing = readable.pages.flatMap(\.takes).filter { !ProjectRecovery.mediaExists($0, at: url) }
+                guard !missing.isEmpty else { throw error }
+                let alert = NSAlert(); alert.messageText = "Some take files are unavailable"
+                alert.informativeText = "Open healthy pages and keep metadata for \(missing.count) unavailable takes in Storage & Recovery."
+                alert.addButton(withTitle: "Open Healthy Pages"); alert.addButton(withTitle: "Cancel")
+                guard alert.runModal() == .alertFirstButtonReturn else { return }
+                value = try ProjectRecovery.isolateMissingMedia(readable, at: url)
             }
-            searchTask?.cancel(); indexedPageText = []; searchQuery = ""; pageFilter = .all
-            pdf = document; manifest = newManifest; projectURL = root; password = newPassword
-            thumbnailCache.removeAllObjects(); artworkCache.removeAllObjects(); waveformCache.removeAllObjects()
-            showRecovery = false; status = ""
-            ocrPages = (try? OCRReading.loadCache(pdfURL: root.appendingPathComponent(newManifest.sourcePDF), cacheDirectory: root.appendingPathComponent("reading"))) ?? [:]
-            let restored = recentProjects.first { $0.id == newManifest.id }?.workspace ?? ProjectWorkspace()
-            loadPage(max(0, min(newManifest.pages.count - 1, restored.page)))
-            scene.viewport = restored.viewport
-            rememberWorkspace(); loadRehearsalHistory()
-        } catch { errorMessage = error.localizedDescription }
+            let loaded = try loadPDFDocuments(value, at: url)
+            if FileManager.default.fileExists(atPath: url.appendingPathComponent("active-take.json").path) {
+                let alert = NSAlert(); alert.messageText = "Recover interrupted take?"
+                alert.informativeText = "Recover readable audio and saved gestures as a new take."
+                alert.addButton(withTitle: "Recover Take"); alert.addButton(withTitle: "Later")
+                if alert.runModal() == .alertFirstButtonReturn {
+                    do { value = try ProjectStore.recover(at: url, manifest: value) }
+                    catch { errorMessage = "The unfinished take could not be recovered: \(error.localizedDescription). Its files have been kept." }
+                }
+            }
+            installProject(value, at: url, documents: loaded.0, passwords: loaded.1)
+        } catch is CancellationError { }
+        catch { errorMessage = error.localizedDescription }
     }
     func saveAs() {
         guard mode == .idle, let root = projectURL, let manifest else { return }
         let panel = NSSavePanel(); panel.allowedContentTypes = [.pdfRecorder]; panel.nameFieldStringValue = manifest.title + ".pdfrecorder"
         panel.message = "Save a portable project containing your PDF and every take."
         guard panel.runModal() == .OK, let destination = panel.url, destination != root else { return }
+        Task {
+            do { try await saveProjectCopy(to: destination) }
+            catch is CancellationError { status = "Project save cancelled" }
+            catch { errorMessage = "Could not save the project: \(error.localizedDescription)" }
+        }
+    }
+    /// Wait for all readers and the OCR cache writer before copying or removing a
+    /// recovery package. Kept separate from the save panel for headless validation.
+    func saveProjectCopy(to destination: URL) async throws {
+        guard mode == .idle, let root = projectURL, let manifest else { return }
+        stopPlayback(); mode = .savingProject; status = "Saving project…"
+        let pendingOCR = ocrTask, pendingReview = reviewTask, pendingSearch = searchTask
+        ocrGeneration = UUID(); ocrTask = nil; ocrProgress = nil
+        reviewGeneration = UUID(); reviewTask = nil; reviewLoading = false
+        searchTask = nil; isSearching = false
+        metadataSaveTask?.cancel(); metadataSaveTask = nil
+        pendingOCR?.cancel(); pendingReview?.cancel(); pendingSearch?.cancel()
+        defer { if mode == .savingProject { mode = .idle } }
+        await pendingOCR?.value
+        await pendingReview?.value
+        await pendingSearch?.value
         do {
-            try ProjectStore.saveCopy(from: root, to: destination, manifest: manifest)
+            try Task.checkCancellation()
+            let worker = Task.detached(priority: .userInitiated) {
+                try Task.checkCancellation()
+                try ProjectStore.saveCopy(from: root, to: destination, manifest: manifest)
+            }
+            try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
+            try Task.checkCancellation()
+            let loaded = try loadPDFDocuments(manifest, at: destination, passwords: documentPasswords, askForPasswords: false)
+            let viewport = scene.viewport
             let wasRecovery = isRecoveryProject
             projectURL = destination
-            hasUnsavedMetadata = false; metadataSaveTask?.cancel(); loadReview(renderScene: false); rememberWorkspace()
+            loadedPDFDocuments = loaded.0; documentPasswords = loaded.1
+            artworkCache.removeAllObjects(); thumbnailCache.removeAllObjects()
+            hasUnsavedMetadata = false; loadOCRCaches(); loadPage(pageIndex); scene.viewport = viewport; rememberWorkspace(); scheduleSearch()
             if wasRecovery { try? FileManager.default.removeItem(at: root) }
             status = "Project saved"
-        } catch { errorMessage = "Could not save the project: \(error.localizedDescription)" }
+        } catch {
+            // The source project and its in-memory metadata remain usable after a
+            // failed save, including OCR pages completed before cancellation settled.
+            loadOCRCaches(); loadReview(renderScene: false); scheduleSearch()
+            status = error is CancellationError ? "Project save cancelled" : "Project save failed"
+            throw error
+        }
     }
     func navigate(to index: Int) {
         guard canNavigate, let manifest, manifest.pages.indices.contains(index) else { return }
@@ -250,19 +265,23 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         stopPlayback(); loadPage(index)
     }
     func loadPage(_ index: Int) {
+        if index != pageIndex { rememberDocumentPosition() }
         pageIndex = index; selectedTakeID = page?.selectedTakeID
+        if let id = currentDocumentID, let document = loadedPDFDocuments[id] { pdf = document; password = documentPasswords[id] }
+        else if !loadedPDFDocuments.isEmpty { pdf = nil; password = nil }
+        artwork = nil
         scene = Scene(); time = selectedTake?.playbackStart ?? 0; undoActions = []; timeline = nil
         redoActions = []; groupedUndoActions = []; loopEnabled = false; comparisonTakeID = nil
         if mode == .rehearsing { rehearsalStart = ProcessInfo.processInfo.systemUptime }
         do {
             let key = NSNumber(value: index)
             if let cached = artworkCache.object(forKey: key) { artwork = cached.value }
-            else if let p = pdf?.page(at: index) {
+            else if let p = pdfPage(at: index) {
                 let value = try PageArtwork(page: p)
                 artwork = value; artworkCache.setObject(ArtworkBox(value), forKey: key, cost: value.image.bytesPerRow * value.image.height)
             }
         } catch { artwork = nil; errorMessage = error.localizedDescription }
-        loadReview(renderScene: false); rememberWorkspace()
+        refreshPageMatches(); loadReview(renderScene: false); rememberWorkspace()
     }
     func apply(_ action: SceneAction) {
         guard canDraw else { return }
@@ -488,7 +507,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
 
     func pageTitle(_ index: Int) -> String {
         guard let manifest, manifest.pages.indices.contains(index) else { return "Page \(index + 1)" }
-        return PresentationTools.title(for: manifest.pages[index], index: index)
+        return PresentationTools.title(for: manifest.pages[index], index: manifest.localPageIndex(globalPage: index) ?? index)
     }
     func updatePage(_ change: (inout PageRecord) -> Void) {
         guard mode == .idle, var updated = manifest else { return }
@@ -514,30 +533,43 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     }
     func refreshPageMatches() {
         guard let manifest else { visiblePageIndices = []; return }
-        visiblePageIndices = PresentationTools.matchingPages(in: manifest, query: searchQuery, filter: pageFilter, pageText: indexedPageText)
+        visiblePageIndices = PresentationTools.matchingPages(in: manifest, query: searchQuery, filter: pageFilter, pageText: indexedPageText).filter { currentDocumentPages.contains($0) }
     }
     func scheduleSearch() {
         searchTask?.cancel(); refreshPageMatches(); isSearching = false
         guard !searchQuery.trimmingCharacters(in: .whitespacesAndNewlines).isEmpty,
               let manifest, indexedPageText.count != manifest.pages.count, let root = projectURL else { return }
-        let id = manifest.id, password = self.password, ocr = ocrPages
-        let url = root.appendingPathComponent(manifest.sourcePDF)
+        let id = manifest.id, passwords = documentPasswords, ocr = ocrPages, sources = manifest.pdfDocuments
         isSearching = true
         searchTask = Task { [weak self] in
             do {
                 try await Task.sleep(nanoseconds: 200_000_000)
                 let worker = Task.detached(priority: .userInitiated) { () throws -> [String] in
-                    guard let document = PDFDocument(url: url) else { return [] }
-                    if document.isLocked { _ = document.unlock(withPassword: password ?? "") }
-                    return try (0..<document.pageCount).map { index in
-                        try Task.checkCancellation(); return ocr[index]?.text ?? document.page(at: index)?.string ?? ""
+                    var text: [String] = []
+                    for source in sources {
+                        try Task.checkCancellation()
+                        guard let document = PDFDocument(url: try ProjectStore.location(source.path, in: root)) else {
+                            throw RecorderError.message("A PDF could not be searched.")
+                        }
+                        if document.isLocked { _ = document.unlock(withPassword: passwords[source.id] ?? "") }
+                        let offset = text.count
+                        text += try (0..<source.pageCount).map { index in
+                            try Task.checkCancellation()
+                            return ocr[offset + index]?.text ?? document.page(at: index)?.string ?? ""
+                        }
                     }
+                    return text
                 }
                 let text = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
                 try Task.checkCancellation()
                 guard let self, self.manifest?.id == id else { return }
                 self.indexedPageText = text; self.isSearching = false; self.refreshPageMatches()
-            } catch { /* A superseded query must not overwrite the new query's state. */ }
+            } catch {
+                // Cancelled searches belong to an older query or project.
+                guard !Task.isCancelled, let self, self.manifest?.id == id, self.projectURL == root else { return }
+                self.isSearching = false
+                self.errorMessage = "Could not search the PDFs: \(error.localizedDescription)"
+            }
         }
     }
     func togglePractice() {

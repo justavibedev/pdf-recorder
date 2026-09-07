@@ -27,7 +27,7 @@ final class CanvasView: NSView, NSMenuItemValidation {
     private var announcedState = ""
     override var acceptsFirstResponder: Bool { true }
     func refreshReading() {
-        guard let model, let page = model.pdf?.page(at: model.pageIndex) else { return }
+        guard let model, let page = model.pdfPage(at: model.pageIndex) else { return }
         let ocr = model.ocrPages[model.pageIndex]
         let changed = readingPage !== page || cachedOCRText != ocr?.text
         if changed {
@@ -35,7 +35,7 @@ final class CanvasView: NSView, NSMenuItemValidation {
             reading = ocr ?? PDFReading.content(of: page)
             selectedText = ""; selectionBoxes = []; selectionStart = nil
             setAccessibilityElement(true); setAccessibilityRole(.textArea)
-            setAccessibilityLabel("PDF page \(PDFReading.label(for: page, index: model.pageIndex))")
+            setAccessibilityLabel("PDF page \(model.pageLabel)")
             setAccessibilityValue(reading.text.isEmpty ? "Scanned page. Use Recognize Text to make this page readable." : reading.text)
             setAccessibilityHelp("Select Text to drag and copy. Arrow or Page Up and Page Down keys navigate. P pen, H highlighter, V pointer, E eraser, T text, A arrow, R rectangle, O ellipse, L line, S select text. Plus and minus zoom.")
         }
@@ -47,7 +47,7 @@ final class CanvasView: NSView, NSMenuItemValidation {
         if state != announcedState {
             announcedState = state
             NSAccessibility.post(element: self, notification: .announcementRequested,
-                                 userInfo: [.announcement: "\(state.capitalized), page \(PDFReading.label(for: page, index: model.pageIndex))", .priority: NSAccessibilityPriorityLevel.medium.rawValue])
+                                 userInfo: [.announcement: "\(state.capitalized), page \(model.pageLabel)", .priority: NSAccessibilityPriorityLevel.medium.rawValue])
         }
     }
     override func updateTrackingAreas() {
@@ -196,10 +196,10 @@ final class CanvasView: NSView, NSMenuItemValidation {
             if key == "0" { model.fit(); return }
         }
         switch event.keyCode {
-        case 123, 126, 116: model.navigate(to: model.pageIndex - 1)
-        case 124, 125, 121: model.navigate(to: model.pageIndex + 1)
-        case 115: model.navigate(to: 0)
-        case 119: model.navigate(to: (model.manifest?.pages.count ?? 1) - 1)
+        case 123, 126, 116: model.navigatePage(-1)
+        case 124, 125, 121: model.navigatePage(1)
+        case 115: model.navigate(to: model.currentDocumentPages.lowerBound)
+        case 119: model.navigate(to: model.currentDocumentPages.upperBound - 1)
         case 49:
             if model.mode == .rehearsing { model.togglePractice() }
             else if model.isRecording { model.togglePause() } else { model.play() }
