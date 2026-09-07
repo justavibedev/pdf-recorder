@@ -149,7 +149,7 @@ final class MediaFeatureTests: XCTestCase {
         let duration = try await AVURLAsset(url: output).load(.duration)
         XCTAssertEqual(duration.seconds, 0.3, accuracy: 0.03)
         let original = try Data(contentsOf: output)
-        let task = Task { try await AudioExporter.export(items: [.init(page: 0, take: take, events: [], audioURL: input)], to: output) { _ in } }
+        let task = Task { [take] in try await AudioExporter.export(items: [.init(page: 0, take: take, events: [], audioURL: input)], to: output) { _ in } }
         task.cancel()
         do { try await task.value; XCTFail("Expected cancellation") } catch is CancellationError {}
         XCTAssertEqual(try Data(contentsOf: output), original)
