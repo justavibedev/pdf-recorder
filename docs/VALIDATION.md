@@ -59,7 +59,8 @@ A simulated clock test does not establish live microphone latency or drift.
 
 ## Current local evidence
 
-The implementation has passed core tests and built a signed universal
-application on Apple Silicon. Intel is cross-compiled, not yet hardware-tested.
+The 0.2 implementation has passed 20 automated tests and built a signed universal
+application on Apple Silicon. Signature verification and both architecture slices
+pass locally. Intel is cross-compiled, not yet hardware-tested.
 Interactive UI, physical microphone, and real 30-minute checks remain pending.
 See CI for verification of the latest commit.

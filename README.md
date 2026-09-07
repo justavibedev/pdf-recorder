@@ -70,8 +70,8 @@ current zoom/pan. Your earlier takes and the source PDF remain intact.
 
 macOS 14 or later. Build with Xcode 15 or later. Apple Silicon and Intel are targeted.
 
-The universal development app is approximately **4–5 MB**, excluding your PDFs
-and recordings. It uses Apple's installed frameworks rather than bundling a
+The universal 0.2 development app is approximately **6 MB** (**2 MB** zipped),
+excluding your PDFs and recordings. It uses Apple's installed frameworks rather than bundling a
 browser or video toolchain. Actual size varies with Xcode and build settings.
 
 ## Get the app
