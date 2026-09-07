@@ -69,7 +69,8 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         timer?.invalidate(); timer = nil
         guard mode == .recording || mode == .playing else { return }
         timer = Timer.scheduledTimer(withTimeInterval: 1.0 / 30, repeats: true) { [weak self] _ in
-            Task { @MainActor in self?.tick() }
+            guard let model = self else { return }
+            Task { @MainActor in model.tick() }
         }
     }
     func refreshInputs() { inputs = MicrophoneRecorder.devices }
