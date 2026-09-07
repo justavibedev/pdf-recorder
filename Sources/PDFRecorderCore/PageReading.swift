@@ -6,8 +6,8 @@ import CryptoKit
 /// Rotation-corrected unit coordinates, matching recorded pointer and annotation coordinates.
 public struct PageTextRect: Codable, Equatable, Sendable {
     public var x: Double, y: Double, width: Double, height: Double
-    public var rect: CGRect { CGRect(x: x, y: y, width: width, height: height) }
-    public init(_ rect: CGRect) { x = rect.minX; y = rect.minY; width = rect.width; height = rect.height }
+    public var rect: CGRect { CGRect(x: CGFloat(x), y: CGFloat(y), width: CGFloat(width), height: CGFloat(height)) }
+    public init(_ rect: CGRect) { x = Double(rect.minX); y = Double(rect.minY); width = Double(rect.width); height = Double(rect.height) }
 }
 
 public struct PageReadingContent: Codable, Equatable, Sendable {
@@ -36,7 +36,7 @@ public enum PDFReading {
     }
     public static func pagePoint(_ normalized: Point, on page: PDFPage) -> CGPoint {
         let size = displaySize(of: page)
-        return CGPoint(x: normalized.x * size.width, y: normalized.y * size.height).applying(page.transform(for: .cropBox).inverted())
+        return CGPoint(x: CGFloat(normalized.x) * size.width, y: CGFloat(normalized.y) * size.height).applying(page.transform(for: .cropBox).inverted())
     }
     public static func content(of page: PDFPage) -> PageReadingContent {
         let text = page.string ?? ""

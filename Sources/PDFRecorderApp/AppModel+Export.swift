@@ -40,7 +40,7 @@ extension AppModel {
                 let panel = NSOpenPanel(); panel.canChooseDirectories = true; panel.canChooseFiles = false; panel.canCreateDirectories = true
                 panel.message = "Choose a folder for a new batch of page recordings. The batch appears only after every page exports successfully."
                 guard panel.runModal() == .OK, let parent = panel.url else { return }
-                destination = parent.appendingPathComponent("\(manifest.title) — Pages \(UUID().uuidString.prefix(6))", isDirectory: true)
+                destination = BatchExport.destination(in: parent, title: manifest.title)
             } else {
                 let panel = NSSavePanel(); panel.allowedContentTypes = kind == .video ? [.mpeg4Movie] : [.mpeg4Audio]
                 panel.nameFieldStringValue = manifest.title + (kind == .video ? ".mp4" : ".m4a")

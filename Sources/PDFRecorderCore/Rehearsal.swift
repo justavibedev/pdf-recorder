@@ -1,5 +1,20 @@
 import Foundation
 
+public enum PresentationPace {
+    public enum Phase { case takeSummary, playback, live }
+    /// Take review uses the kept duration and an offset from the trim start; recording and rehearsal clocks already start at zero.
+    public static func elapsed(take: Take?, sourceTime: Double, phase: Phase) -> Double {
+        let time = sourceTime.isFinite ? max(0, sourceTime) : 0
+        switch phase {
+        case .takeSummary: return take?.playbackDuration ?? 0
+        case .playback:
+            guard let take else { return 0 }
+            return max(0, min(take.playbackDuration, time - take.playbackStart))
+        case .live: return time
+        }
+    }
+}
+
 public struct RehearsalPageTiming: Codable, Equatable, Identifiable, Sendable {
     public var page: Int
     public var title: String

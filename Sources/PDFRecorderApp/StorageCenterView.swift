@@ -32,6 +32,11 @@ import PDFRecorderCore
                     metric("Available space", bytes: inventory.availableBytes, symbol: "internaldrive")
                     metric("Unused takes", bytes: inventory.unusedTakeBytes, symbol: "waveform")
                 }
+                HStack {
+                    Text("Prepared audio cache: up to 3 clips / 512 MB; one longer clip may exceed that budget.").font(.caption2).foregroundStyle(.secondary)
+                    Spacer()
+                    Button("Clear Playback Cache", action: model.clearPlaybackCache).font(.caption).disabled(model.mode != .idle)
+                }
                 ScrollView {
                     VStack(alignment: .leading, spacing: 18) {
                         if inventory.hasActiveTake {

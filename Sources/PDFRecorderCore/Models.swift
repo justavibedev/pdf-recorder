@@ -41,7 +41,8 @@ public enum SceneAction: Codable, Equatable, Sendable {
     case beginStroke(Stroke)
     case extendStroke(UUID, Point)
     case removeStroke(UUID)
-    case restoreStroke(Stroke)
+    /// A missing index preserves the append behavior of older event logs.
+    case restoreStroke(Stroke, index: Int? = nil)
 }
 
 public struct TimedEvent: Codable, Equatable, Sendable {
@@ -59,8 +60,12 @@ public struct Scene: Equatable, Sendable {
         switch action {
         case .pointer(let p): pointer = p
         case .viewport(let v): viewport = v
-        case .beginStroke(let s), .restoreStroke(let s):
+        case .beginStroke(let s):
             if !strokes.contains(where: { $0.id == s.id }) { strokes.append(s) }
+        case .restoreStroke(let s, let index):
+            if !strokes.contains(where: { $0.id == s.id }) {
+                strokes.insert(s, at: min(strokes.count, max(0, index ?? strokes.count)))
+            }
         case .extendStroke(let id, let p):
             if let i = strokes.firstIndex(where: { $0.id == id }) { strokes[i].points.append(p) }
         case .removeStroke(let id): strokes.removeAll { $0.id == id }

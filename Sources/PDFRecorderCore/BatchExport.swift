@@ -1,6 +1,21 @@
 import Foundation
 
 public enum BatchExport {
+    /// Imported project titles are display text, never filesystem paths.
+    public static func destination(in parent: URL, title: String) -> URL {
+        let forbidden = CharacterSet.controlCharacters.union(CharacterSet(charactersIn: "/\\:"))
+        let cleaned = title.components(separatedBy: forbidden).joined(separator: " ")
+            .trimmingCharacters(in: .whitespacesAndNewlines.union(CharacterSet(charactersIn: ".")))
+        // Bound UTF-8 bytes as well as visual length for emoji and combined characters.
+        var name = ""
+        for character in cleaned {
+            guard name.utf8.count + String(character).utf8.count <= 160 else { break }
+            name.append(character)
+        }
+        if name.isEmpty { name = "Presentation" }
+        return parent.appendingPathComponent("\(name) — Pages \(UUID().uuidString.prefix(6))", isDirectory: true)
+    }
+
     public static func run(pages: [Int], destination: URL, fileExtension: String,
                            exportPage: @Sendable (Int, URL) async throws -> Void) async throws {
         guard !pages.isEmpty, !FileManager.default.fileExists(atPath: destination.path),

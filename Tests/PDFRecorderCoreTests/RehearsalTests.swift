@@ -2,6 +2,17 @@ import XCTest
 @testable import PDFRecorderCore
 
 final class RehearsalTests: XCTestCase {
+    func testPacingUsesTrimmedTakeAndPlaybackOffsetsButKeepsLiveTime() {
+        var take = Take(duration: 60); take.trimStart = 20; take.trimEnd = 30
+        XCTAssertEqual(PresentationPace.elapsed(take: take, sourceTime: 25, phase: .takeSummary), 10)
+        XCTAssertEqual(PresentationPace.elapsed(take: take, sourceTime: 25, phase: .playback), 5)
+        XCTAssertEqual(PresentationPace.elapsed(take: take, sourceTime: 15, phase: .playback), 0)
+        XCTAssertEqual(PresentationPace.elapsed(take: take, sourceTime: 50, phase: .playback), 10)
+        XCTAssertEqual(PresentationPace.elapsed(take: take, sourceTime: 25, phase: .live), 25)
+        XCTAssertEqual(PresentationPace.elapsed(take: nil, sourceTime: 25, phase: .takeSummary), 0)
+        XCTAssertEqual(PresentationPace.elapsed(take: nil, sourceTime: 25, phase: .live), 25)
+        XCTAssertEqual(PresentationPace.elapsed(take: take, sourceTime: .nan, phase: .playback), 0)
+    }
     private func fixture() -> ProjectManifest {
         var manifest = ProjectManifest(title: "Biology seminar", pageCount: 3)
         manifest.pages[0].title = "Introduction"; manifest.pages[0].targetSeconds = 60

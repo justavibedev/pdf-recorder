@@ -17,12 +17,13 @@ extension AppModel {
                 guard reviewGeneration == generation, selectedTakeID == take.id, pageIndex == index, projectURL == root else { return }
                 timeline = loaded
                 if mode == .idle, reviewRenderScene { time = max(take.playbackStart, min(take.playbackEnd, time)); scene = timeline!.seek(to: time) }
+                if let cached = waveformCache.object(forKey: take.id as NSUUID)?.value { waveform = cached; reviewLoading = false; return }
                 // Make the timeline seekable before scanning the waveform of a long recording.
                 let analyzer = Task.detached(priority: .utility) { try AudioAnalysis.analyze(url: ProjectStore.location(take.audioPath, in: root)) }
                 let analysis = try await withTaskCancellationHandler(operation: { try await analyzer.value }, onCancel: { analyzer.cancel() })
                 try Task.checkCancellation()
                 guard reviewGeneration == generation, selectedTakeID == take.id, pageIndex == index, projectURL == root else { return }
-                waveform = analysis; reviewLoading = false
+                waveform = analysis; waveformCache.setObject(WaveformBox(analysis), forKey: take.id as NSUUID); reviewLoading = false
             } catch {
                 if reviewGeneration == generation, !(error is CancellationError) { errorMessage = error.localizedDescription; reviewLoading = false }
             }
@@ -69,12 +70,14 @@ extension AppModel {
         guard canDraw, !scene.strokes.isEmpty else { return }
         let strokes = scene.strokes
         for stroke in strokes { apply(.removeStroke(stroke.id)) }
-        groupedUndoActions.append(strokes.map(SceneAction.restoreStroke)); redoActions = []
+        groupedUndoActions.append(strokes.enumerated().map { .restoreStroke($0.element, index: $0.offset) }); redoActions = []
     }
     func inverse(_ action: SceneAction) -> SceneAction? {
         switch action {
-        case .removeStroke(let id): return scene.strokes.first { $0.id == id }.map(SceneAction.restoreStroke)
-        case .restoreStroke(let stroke): return .removeStroke(stroke.id)
+        case .removeStroke(let id):
+            guard let index = scene.strokes.firstIndex(where: { $0.id == id }) else { return nil }
+            return .restoreStroke(scene.strokes[index], index: index)
+        case .restoreStroke(let stroke, _): return .removeStroke(stroke.id)
         default: return nil
         }
     }

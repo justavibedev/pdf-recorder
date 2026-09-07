@@ -5,6 +5,7 @@ import PDFRecorderCore
 final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDelegate, @unchecked Sendable {
     struct Snapshot {
         var time = 0.0; var level = 0.0; var rmsDB = -100.0; var peak = 0.0
+        var deviceName = ""
         var feedback: String {
             if time < 1 { return "Speak normally to check your microphone" }
             if peak >= 0.99 { return "Clipping · move farther from the microphone or reduce input volume" }
@@ -22,6 +23,7 @@ final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDe
     private var level = 0.0
     private var rmsDB = -100.0
     private var peak = 0.0
+    private var deviceName = ""
     private var failed = false
     private var observers: [NSObjectProtocol] = []
     var onFailure: ((String) -> Void)?
@@ -29,7 +31,7 @@ final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDe
     static var devices: [AVCaptureDevice] {
         AVCaptureDevice.DiscoverySession(deviceTypes: [.microphone, .external], mediaType: .audio, position: .unspecified).devices
     }
-    var snapshot: Snapshot { queue.sync { Snapshot(time: clock?.duration ?? 0, level: level, rmsDB: rmsDB, peak: peak) } }
+    var snapshot: Snapshot { queue.sync { Snapshot(time: clock?.duration ?? 0, level: level, rmsDB: rmsDB, peak: peak, deviceName: deviceName) } }
 
     func start(deviceID: String?, url: URL?) async throws {
         let permitted = await AVCaptureDevice.requestAccess(for: .audio)
@@ -43,6 +45,7 @@ final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDe
                         device = Self.devices.first { $0.uniqueID == deviceID }
                     } else { device = AVCaptureDevice.default(for: .audio) }
                     guard let device else { throw RecorderError.message("The selected microphone is unavailable. Connect a microphone or choose another input.") }
+                    self.deviceName = device.localizedName
                     let session = AVCaptureSession()
                     let input = try AVCaptureDeviceInput(device: device)
                     let output = AVCaptureAudioDataOutput()
@@ -92,7 +95,7 @@ final class MicrophoneRecorder: NSObject, AVCaptureAudioDataOutputSampleBufferDe
     private func cleanUp() {
         observers.forEach(NotificationCenter.default.removeObserver); observers = []
         session?.stopRunning(); session = nil
-        audioFile = nil; outputURL = nil; level = 0
+        audioFile = nil; outputURL = nil; level = 0; deviceName = ""
     }
     func captureOutput(_ output: AVCaptureOutput, didOutput sampleBuffer: CMSampleBuffer, from connection: AVCaptureConnection) {
         guard !paused, !failed, session != nil else { return }

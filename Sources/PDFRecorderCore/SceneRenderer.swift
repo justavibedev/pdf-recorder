@@ -1,6 +1,7 @@
 import AppKit
 import PDFKit
 import CoreText
+import Darwin
 
 /// All page coordinates use the displayed (rotation-corrected) page: origin bottom-left, range 0...1.
 public struct PageGeometry {
@@ -8,20 +9,20 @@ public struct PageGeometry {
     public let pageSize: CGSize
     public let viewport: Viewport
     public var pageRect: CGRect {
-        let scale = min(canvas.width / pageSize.width, canvas.height / pageSize.height) * viewport.zoom
+        let scale = min(canvas.width / pageSize.width, canvas.height / pageSize.height) * CGFloat(viewport.zoom)
         let size = CGSize(width: pageSize.width * scale, height: pageSize.height * scale)
-        return CGRect(x: canvas.midX - size.width / 2 + viewport.offset.x * canvas.width,
-                      y: canvas.midY - size.height / 2 + viewport.offset.y * canvas.height,
+        return CGRect(x: canvas.midX - size.width / 2 + CGFloat(viewport.offset.x) * canvas.width,
+                      y: canvas.midY - size.height / 2 + CGFloat(viewport.offset.y) * canvas.height,
                       width: size.width, height: size.height)
     }
     public init(canvas: CGRect, pageSize: CGSize, viewport: Viewport) {
         self.canvas = canvas; self.pageSize = pageSize; self.viewport = viewport
     }
     public func toCanvas(_ point: Point) -> CGPoint {
-        CGPoint(x: pageRect.minX + point.x * pageRect.width, y: pageRect.minY + point.y * pageRect.height)
+        CGPoint(x: pageRect.minX + CGFloat(point.x) * pageRect.width, y: pageRect.minY + CGFloat(point.y) * pageRect.height)
     }
     public func toPage(_ point: CGPoint) -> Point {
-        Point((point.x - pageRect.minX) / pageRect.width, (point.y - pageRect.minY) / pageRect.height)
+        Point(Double((point.x - pageRect.minX) / pageRect.width), Double((point.y - pageRect.minY) / pageRect.height))
     }
 }
 
@@ -53,7 +54,8 @@ public struct PageArtwork {
         let clip = context.boundingBoxOfClipPath.intersection(rect)
         guard !clip.isNull, !clip.isEmpty else { return }
         let transform = context.ctm
-        let scaleX = hypot(transform.a, transform.b), scaleY = hypot(transform.c, transform.d)
+        let scaleX = (transform.a * transform.a + transform.b * transform.b).squareRoot()
+        let scaleY = (transform.c * transform.c + transform.d * transform.d).squareRoot()
         let width = Int(ceil(clip.width * scaleX)), height = Int(ceil(clip.height * scaleY))
         // Cache only the visible viewport at actual output resolution. Pointer movement does not redraw the PDF.
         // Zooming/panning invalidates this image. Huge output contexts use vectors directly instead of downscaling.
@@ -87,10 +89,19 @@ public struct PageArtwork {
 private final class ArtworkRenderCache {
     struct Key: Equatable { let clip: CGRect, pageRect: CGRect; let width: Int, height: Int }
     private let lock = NSLock()
-    private var key: Key?
-    private var value: CGImage?
-    func image(for key: Key) -> CGImage? { lock.lock(); defer { lock.unlock() }; return self.key == key ? value : nil }
-    func set(_ value: CGImage, for key: Key) { lock.lock(); defer { lock.unlock() }; self.key = key; self.value = value }
+    private var entries: [(Key, CGImage)] = []
+    func image(for key: Key) -> CGImage? {
+        lock.lock(); defer { lock.unlock() }
+        guard let index = entries.firstIndex(where: { $0.0 == key }) else { return nil }
+        let entry = entries.remove(at: index); entries.append(entry); return entry.1
+    }
+    func set(_ value: CGImage, for key: Key) {
+        lock.lock(); defer { lock.unlock() }
+        entries.removeAll { $0.0 == key }; entries.append((key, value))
+        // Keep the editor and audience viewport independently warm without growing
+        // with each zoom step. Bound each page's combined cached backgrounds to64MB.
+        while entries.count > 2 || (entries.count > 1 && entries.reduce(0, { $0 + $1.1.bytesPerRow * $1.1.height }) > 64 * 1024 * 1024) { entries.removeFirst() }
+    }
 }
 
 public enum SceneRenderer {
@@ -120,10 +131,10 @@ public enum SceneRenderer {
             context.saveGState()
             context.setStrokeColor(color(stroke.color))
             context.setFillColor(color(stroke.color))
-            let width = stroke.width * rect.width
+            let width = CGFloat(stroke.width) * rect.width
             context.setLineWidth(width)
             context.setLineCap(.round); context.setLineJoin(.round)
-            context.setAlpha(max(0.02, min(1, stroke.opacity ?? (stroke.tool == .highlighter ? 0.36 : 1))))
+            context.setAlpha(CGFloat(max(0.02, min(1, stroke.opacity ?? (stroke.tool == .highlighter ? 0.36 : 1)))))
             if stroke.tool == .highlighter { context.setBlendMode(.multiply) }
             if let shape = AnnotationGeometry.shape(of: stroke) {
                 drawShape(shape, stroke: stroke, geometry: geometry, context: context)
@@ -160,16 +171,17 @@ public enum SceneRenderer {
         case .line, .arrow:
             context.beginPath(); context.move(to: a); context.addLine(to: b)
             if shape == .arrow {
-                let length = max(12, stroke.width * geometry.pageRect.width * 5)
-                let angle = atan2(b.y - a.y, b.x - a.x)
+                let length: CGFloat = max(12, CGFloat(stroke.width) * geometry.pageRect.width * 5)
+                let angle: Double = Darwin.atan2(Double(b.y - a.y), Double(b.x - a.x))
                 for delta in [-Double.pi / 6, Double.pi / 6] {
                     context.move(to: b)
-                    context.addLine(to: CGPoint(x: b.x - cos(angle + delta) * length, y: b.y - sin(angle + delta) * length))
+                    context.addLine(to: CGPoint(x: b.x - CGFloat(Darwin.cos(angle + delta)) * length,
+                                               y: b.y - CGFloat(Darwin.sin(angle + delta)) * length))
                 }
             }
             context.strokePath()
         case .text:
-            let font = CTFontCreateWithName("Helvetica" as CFString, max(8, stroke.width * geometry.pageRect.width * 5), nil)
+            let font = CTFontCreateWithName("Helvetica" as CFString, max(8, CGFloat(stroke.width) * geometry.pageRect.width * 5), nil)
             let attributes = [kCTFontAttributeName: font, kCTForegroundColorAttributeName: color(stroke.color)] as CFDictionary
             let text = CFAttributedStringCreate(nil, (stroke.text ?? "Text") as CFString, attributes)!
             let line = CTLineCreateWithAttributedString(text)

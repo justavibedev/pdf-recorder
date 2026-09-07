@@ -49,7 +49,7 @@ import PDFRecorderCore
                 Button("Rehearsal Reports…") { model.showRehearsalHistory = true }.disabled(model.manifest == nil)
                 Divider()
                 Button("Practice / End Practice", action: model.togglePractice).keyboardShortcut("r", modifiers: [.command, .option]).disabled(model.manifest == nil || (model.mode != .idle && model.mode != .rehearsing))
-                Button("Show Notes / Takes") { model.showNotes.toggle() }.keyboardShortcut("n", modifiers: [.command, .shift])
+                Button("Show Notes / Takes") { model.showNotes.toggle(); model.hideInspector = false }.keyboardShortcut("n", modifiers: [.command, .shift])
                 Button("Bookmark Page", action: model.toggleBookmark).keyboardShortcut("b", modifiers: [.command, .shift]).disabled(model.mode != .idle || model.manifest == nil)
                 Button("Next Unrecorded Page", action: model.nextUnrecorded).keyboardShortcut("u", modifiers: [.command, .shift]).disabled(!model.canNavigate)
                 Button("Focus Mode") { model.focusMode.toggle() }.keyboardShortcut("f", modifiers: [.command, .shift])

@@ -133,9 +133,10 @@ public enum ProjectStore {
             switch event.action {
             case .pointer(let p): okay = okay && (p.map(valid) ?? true)
             case .viewport(let v): okay = okay && valid(v)
-            case .beginStroke(let s), .restoreStroke(let s):
+            case .beginStroke(let s), .restoreStroke(let s, _):
                 okay = okay && s.width.isFinite && s.width > 0 && s.width < 1 && s.points.allSatisfy(valid)
                 if let opacity = s.opacity { okay = okay && opacity.isFinite && (0...1).contains(opacity) }
+                if case .restoreStroke(_, let index) = event.action, let index { okay = okay && index >= 0 }
             case .extendStroke(_, let p): okay = okay && valid(p)
             case .removeStroke: break
             }

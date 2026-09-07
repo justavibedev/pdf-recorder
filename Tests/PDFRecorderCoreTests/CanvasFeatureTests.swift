@@ -78,6 +78,56 @@ final class CanvasFeatureTests: XCTestCase {
         XCTAssertEqual(timeline.seek(to: 3.5).strokes, [text, rectangle])
         XCTAssertEqual(timeline.seek(to: 0.5).strokes.first?.opacity, 0.5)
     }
+    func testRestoredStrokeKeepsOriginalVisualLayerDuringReplayAndScrubbing() throws {
+        let lower = Stroke(tool: .pen, color: "red", width: 0.05, points: [Point(0.1, 0.5), Point(0.9, 0.5)])
+        let middle = Stroke(tool: .pen, color: "blue", width: 0.05, points: [Point(0.5, 0.1), Point(0.5, 0.9)])
+        let upper = Stroke(tool: .pen, color: "green", width: 0.03, points: [Point(0.2, 0.8), Point(0.8, 0.8)])
+        let ordered = [lower, middle, upper]
+        let events: [TimedEvent] = ordered.map { .init(time: 0, action: .beginStroke($0)) } + [
+            .init(time: 1, action: .removeStroke(lower.id)),
+            .init(time: 2, action: .restoreStroke(lower, index: 0)),
+            .init(time: 3, action: .removeStroke(middle.id)),
+            .init(time: 4, action: .restoreStroke(middle, index: 1)),
+            .init(time: 5, action: .removeStroke(lower.id)),
+            .init(time: 5, action: .removeStroke(middle.id)),
+            .init(time: 5, action: .removeStroke(upper.id)),
+            .init(time: 6, action: .restoreStroke(lower, index: 0)),
+            .init(time: 6, action: .restoreStroke(middle, index: 1)),
+            .init(time: 6, action: .restoreStroke(upper, index: 2))
+        ]
+        try ProjectStore.validate(events)
+        let decoded = try JSONDecoder().decode([TimedEvent].self, from: JSONEncoder().encode(events))
+        var timeline = Timeline(events: decoded, initialViewport: Viewport())
+        let original = timeline.seek(to: 0.5)
+        XCTAssertEqual(timeline.seek(to: 1.5).strokes, [middle, upper])
+        let restored = timeline.seek(to: 2.5)
+        XCTAssertEqual(restored, original)
+        XCTAssertEqual(timeline.seek(to: 3.5).strokes, [lower, upper])
+        XCTAssertEqual(timeline.seek(to: 4.5), original)
+        XCTAssertTrue(timeline.seek(to: 5.5).strokes.isEmpty)
+        XCTAssertEqual(timeline.seek(to: 6.5), original)
+        XCTAssertEqual(timeline.seek(to: 2.5), original, "Backward scrubbing must preserve the same restored layer order")
+        let document = fixturePDF(), artwork = try PageArtwork(page: document.page(at: 0)!)
+        let size = CGSize(width: 960, height: 540)
+        let referencePixels = pixels(SceneRenderer.image(artwork: artwork, scene: original, size: size)!)
+        XCTAssertEqual(pixels(SceneRenderer.image(artwork: artwork, scene: restored, size: size)!), referencePixels)
+        var wrongOrder = original; wrongOrder.strokes = [middle, upper, lower]
+        XCTAssertNotEqual(pixels(SceneRenderer.image(artwork: artwork, scene: wrongOrder, size: size)!), referencePixels,
+                          "The fixture must expose the visible overlap regression caused by appending a lower stroke")
+    }
+    func testLegacyRestorationPayloadStillDecodesAndInvalidIndicesAreRejected() throws {
+        let existing = Stroke(tool: .pen, color: "blue", width: 0.01, points: [Point(0.5, 0.5)])
+        let restored = Stroke(tool: .pen, color: "red", width: 0.01, points: [Point(0.5, 0.5)])
+        let oldStroke = try JSONSerialization.jsonObject(with: JSONEncoder().encode(restored))
+        let legacyPayload = try JSONSerialization.data(withJSONObject: ["restoreStroke": ["_0": oldStroke]])
+        let decoded = try JSONDecoder().decode(SceneAction.self, from: legacyPayload)
+        XCTAssertEqual(decoded, .restoreStroke(restored))
+        var scene = Scene(); scene.apply(.beginStroke(existing)); scene.apply(decoded)
+        XCTAssertEqual(scene.strokes, [existing, restored], "Existing event logs retain their original append semantics")
+        let ordered = SceneAction.restoreStroke(restored, index: 0)
+        XCTAssertEqual(try JSONDecoder().decode(SceneAction.self, from: JSONEncoder().encode(ordered)), ordered)
+        XCTAssertThrowsError(try ProjectStore.validate([.init(time: 0, action: .restoreStroke(restored, index: -1))]))
+    }
     func testOutlineAndPrintedPageLabels() throws {
         let document = labeledPDF()
         XCTAssertEqual(PDFReading.label(for: document.page(at: 0)!, index: 0), "i")

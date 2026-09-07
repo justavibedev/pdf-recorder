@@ -14,7 +14,7 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
             else { workspace }
         }
         .tint(accent)
-        .frame(minWidth: model.focusMode && model.hideInspector ? 620 : 760, minHeight: 620)
+        .frame(minWidth: model.focusMode || model.hideInspector ? 620 : 760, minHeight: 620)
         .controlSize(model.largeControls ? .large : .regular)
         .background(Color(nsColor: .windowBackgroundColor))
         .toolbar {
@@ -47,7 +47,8 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
         .onChange(of: model.focusSearchToken) { _, _ in model.focusMode = false; searchFocused = true }
         .sheet(isPresented: Binding(get: { model.mode == .exporting }, set: { _ in })) { exportProgress }
         .sheet(isPresented: $model.showRecovery) { recovery }
-        .onChange(of: model.pageIndex) { _, index in pageNumber = String(index + 1) }
+        .onChange(of: model.pageIndex) { _, _ in pageNumber = model.pageLabel }
+        .onChange(of: model.manifest?.id) { _, _ in pageNumber = model.pageLabel }
         .onDrop(of: [.fileURL], isTargeted: nil) { providers in
             guard model.mode == .idle, let provider = providers.first else { return false }
             _ = provider.loadObject(ofClass: URL.self) { url, _ in
@@ -118,8 +119,8 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
                             TextField("Page", text: $pageNumber).frame(width: 35).multilineTextAlignment(.center)
                                 .textFieldStyle(.roundedBorder).disabled(!model.canNavigate)
                                 .onSubmit {
-                                    if let number = Int(pageNumber) { model.navigate(to: number - 1) }
-                                    pageNumber = String(model.pageIndex + 1)
+                                    model.navigate(toLabel: pageNumber)
+                                    pageNumber = model.pageLabel
                                 }
                             Text("of \(model.manifest?.pages.count ?? 0)").foregroundStyle(.secondary)
                         }.font(.caption)
@@ -225,7 +226,7 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
             }
             ScrollView(.horizontal, showsIndicators: false) { HStack(spacing: 8) {
                 Menu("Ink") { ForEach(["blue", "red", "yellow", "green", "purple"], id: \.self) { color in Button(color.capitalized) { model.inkColor = color } } }.frame(width: 54)
-                Menu("Width") { ForEach([0.0015, 0.003, 0.006, 0.012], id: \.self) { width in Button("\(width * 1000, specifier: "%g") pt") { model.annotationWidth = width } } }.frame(width: 64)
+                Menu("Width") { ForEach(Array(["Fine", "Regular", "Bold", "Broad"].enumerated()), id: \.offset) { index, label in Button(label) { model.annotationWidth = [0.0015, 0.003, 0.006, 0.012][index] } } }.frame(width: 64)
                 Slider(value: $model.annotationOpacity, in: 0.1...1).frame(maxWidth: 85).help("Ink opacity").accessibilityLabel("Ink opacity")
                 if model.tool == .text { TextField("Text label", text: $model.annotationText).textFieldStyle(.roundedBorder).frame(maxWidth: 150) }
                 Spacer(minLength: 0)
@@ -252,7 +253,11 @@ private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
             HStack(spacing: 12) {
                 if model.mode == .checkingMicrophone {
                     Button("Stop Microphone Check") { Task { await model.stopMicrophoneCheck() } }.buttonStyle(.borderedProminent)
-                    Text(model.microphoneFeedback).font(.caption).lineLimit(3)
+                    VStack(alignment: .leading, spacing: 3) {
+                        Text(model.microphone.snapshot.deviceName).font(.caption.weight(.semibold)).lineLimit(1)
+                            .accessibilityLabel("Active microphone: \(model.microphone.snapshot.deviceName)")
+                        Text(model.microphoneFeedback).font(.caption).lineLimit(3)
+                    }
                 } else if model.mode == .loadingPlayback {
                     ProgressView().controlSize(.small)
                     Text("Preparing playback…").font(.caption)

@@ -97,7 +97,10 @@ import PDFRecorderCore
     @ObservedObject var model: AppModel
     var body: some View {
         if let target = model.page?.targetSeconds, target > 0 {
-            let elapsed = model.mode == .idle ? (model.selectedTake?.duration ?? 0) : model.time
+            let reviewing = model.mode == .playing || model.mode == .loadingPlayback || model.playbackPaused
+            let phase: PresentationPace.Phase = reviewing ? .playback : model.mode == .idle ? .takeSummary : .live
+            let sceneTime = model.mode == .countdown || model.mode == .starting ? 0 : model.time
+            let elapsed = PresentationPace.elapsed(take: model.selectedTake, sourceTime: sceneTime, phase: phase)
             HStack(spacing: 8) {
                 Image(systemName: elapsed > target ? "clock.badge.exclamationmark" : "timer")
                 Text(elapsed > target ? "\(duration(elapsed - target)) over target" : "\(duration(max(0, target - elapsed))) to target")

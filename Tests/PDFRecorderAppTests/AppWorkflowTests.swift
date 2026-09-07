@@ -131,6 +131,42 @@ final class AppWorkflowTests: XCTestCase {
         XCTAssertEqual(model.mode, .idle)
     }
 
+    @MainActor func testErasingLowerLayersAndUndoingClearRetainsAnnotationOrder() async throws {
+        let fixture = try WorkflowFixture(); defer { fixture.remove() }
+        let model = AppModel(storageRoot: fixture.support, connectDevices: false)
+        model.open(fixture.project); await model.reviewTask?.value
+        defer { model.reviewTask?.cancel() }
+        model.scene = Scene(); model.groupedUndoActions = []; model.redoActions = []
+        let lower = Stroke(tool: .pen, color: "red", width: 0.03, points: [Point(0.1, 0.5), Point(0.9, 0.5)])
+        let middle = Stroke(tool: .pen, color: "blue", width: 0.03, points: [Point(0.5, 0.1), Point(0.5, 0.9)])
+        let upper = Stroke(tool: .pen, color: "green", width: 0.03, points: [Point(0.2, 0.8), Point(0.8, 0.8)])
+        let ordered = [lower, middle, upper]
+        for stroke in ordered { model.apply(.beginStroke(stroke)); model.finishedStroke(stroke.id) }
+        model.erase(middle)
+        XCTAssertEqual(model.scene.strokes, [lower, upper])
+        XCTAssertEqual(model.groupedUndoActions.last, [.restoreStroke(middle, index: 1)])
+        model.undo(); XCTAssertEqual(model.scene.strokes, ordered)
+        model.redo(); XCTAssertEqual(model.scene.strokes, [lower, upper])
+        model.undo(); XCTAssertEqual(model.scene.strokes, ordered)
+
+        model.erase(lower); model.erase(middle)
+        XCTAssertEqual(model.scene.strokes, [upper])
+        model.undo(); XCTAssertEqual(model.scene.strokes, [middle, upper])
+        model.undo(); XCTAssertEqual(model.scene.strokes, ordered)
+        model.redo(); XCTAssertEqual(model.scene.strokes, [middle, upper])
+        model.redo(); XCTAssertEqual(model.scene.strokes, [upper])
+        model.undo(); model.undo(); XCTAssertEqual(model.scene.strokes, ordered)
+
+        model.clearMarks(); XCTAssertTrue(model.scene.strokes.isEmpty)
+        for _ in 0..<3 {
+            model.undo(); XCTAssertEqual(model.scene.strokes, ordered)
+            model.redo(); XCTAssertTrue(model.scene.strokes.isEmpty)
+        }
+        model.undo(); XCTAssertEqual(model.scene.strokes, ordered)
+        XCTAssertTrue(model.events.isEmpty, "Headless annotation review never starts a recording")
+        XCTAssertEqual(model.mode, .idle)
+    }
+
     @MainActor func testPreferencesPinnedProjectsAndLastViewportReopenFromIsolatedStorage() async throws {
         let fixture = try WorkflowFixture(); defer { fixture.remove() }
         let model = AppModel(storageRoot: fixture.support, connectDevices: false)

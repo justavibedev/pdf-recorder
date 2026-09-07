@@ -5,7 +5,7 @@ recording more reliable, accessible, or easier to understand are welcome.
 
 ## Setup
 
-1. Install Xcode 15 or newer and open `PDFRecorder.xcodeproj`.
+1. Install Xcode 15.4 or newer and open `PDFRecorder.xcodeproj`.
 2. Choose the `PDFRecorder` scheme and run on your Mac.
 3. Grant microphone access when you choose **Record Page**.
 4. Run `swift test` before submitting a change.
@@ -18,7 +18,13 @@ and commit the generated Xcode project too.
 
 - `PDFRecorderCore`: format, timeline, geometry, renderer, persistence, export.
 - `PDFRecorderApp`: macOS UI, microphone capture, document and playback state.
-- `Tests`: deterministic core tests and a real AVFoundation MP4 smoke test.
+- `PDFRecorderAppSupport`: Swift Package test target for app controllers, excluding the app entry point.
+- `Tests`: core, storage, OCR and synthetic AVFoundation media tests, plus headless app workflow tests.
+
+The automated suite never starts the application or microphone. Controller tests
+use an isolated storage root, disable device discovery, and use fake playback.
+Preserve those boundaries when adding coverage. Hardware checks in the validation
+checklist are separate and require the tester's explicit action.
 
 Keep the recording, preview, and export renderer consistent. New recorded
 actions must have deterministic replay and backward-compatible decoding, or

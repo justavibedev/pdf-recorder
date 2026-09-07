@@ -81,6 +81,14 @@ extension AppModel {
             storageLoading = false
         }
     }
+    func clearPlaybackCache() {
+        guard mode == .idle else { return }
+        stopPlayback()
+        Task {
+            do { try await playbackAudioCache.removeAll(); status = "Playback cache cleared · source takes preserved"; refreshStorage() }
+            catch { errorMessage = error.localizedDescription }
+        }
+    }
     func makeSnapshot() {
         guard mode == .idle, flushMetadata(), let manifest, let root = projectURL else { return }
         do { try ProjectRecovery.snapshot(manifest, reason: "Saved checkpoint", at: root); status = "Project snapshot saved"; refreshStorage() }
@@ -143,5 +151,10 @@ extension AppModel {
         }
     }
     var pageLabel: String { pdf?.page(at: pageIndex).map { PDFReading.label(for: $0, index: pageIndex) } ?? "\(pageIndex + 1)" }
+    func navigate(toLabel label: String) {
+        let label = label.trimmingCharacters(in: .whitespacesAndNewlines)
+        if let pdf, let index = (0..<pdf.pageCount).first(where: { pdf.page(at: $0)?.label == label }) { navigate(to: index) }
+        else if let number = Int(label) { navigate(to: number - 1) }
+    }
     var outlineItems: [PDFOutlineItem] { pdf.map(PDFReading.outline(in:)) ?? [] }
 }

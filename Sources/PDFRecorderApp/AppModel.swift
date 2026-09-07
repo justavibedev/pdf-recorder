@@ -81,6 +81,9 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     var playbackPaused = false
     var playbackIsPresentation = false
     var playbackClip: URL?
+    lazy var playbackAudioCache = PlaybackAudioCache(directory: supportRoot.appendingPathComponent("Playback Cache", isDirectory: true))
+    var waveformCache = NSCache<NSUUID, WaveformBox>()
+    class WaveformBox { let value: WaveformAnalysis; init(_ value: WaveformAnalysis) { self.value = value } }
     var lastDeletedTake: UUID?
     var redoActions: [[SceneAction]] = []
     var groupedUndoActions: [[SceneAction]] = []
@@ -122,6 +125,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         artworkCache.totalCostLimit = 100 * 1024 * 1024
         artworkCache.countLimit = 3
         thumbnailCache.countLimit = 100
+        waveformCache.countLimit = 20
         if connectDevices { refreshInputs() }
         microphone.onFailure = { [weak self] message in
             if let self, self.mode == .checkingMicrophone { Task { await self.stopMicrophoneCheck(); self.errorMessage = message }; return }
@@ -143,7 +147,8 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         recoveryProjects = ((try? FileManager.default.contentsOfDirectory(at: recoveryRoot, includingPropertiesForKeys: [.contentModificationDateKey])) ?? [])
             .filter { $0.pathExtension == "pdfrecorder" }
             .sorted { $0.lastPathComponent < $1.lastPathComponent }
-        showRecovery = !recoveryProjects.isEmpty
+        let knownPaths = Set(recentProjects.map(\.path))
+        showRecovery = recoveryProjects.contains { !knownPaths.contains($0.path) }
     }
     func thumbnail(_ index: Int) -> NSImage? {
         let key = NSNumber(value: index)
@@ -216,7 +221,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
             }
             searchTask?.cancel(); indexedPageText = []; searchQuery = ""; pageFilter = .all
             pdf = document; manifest = newManifest; projectURL = root; password = newPassword
-            thumbnailCache.removeAllObjects(); artworkCache.removeAllObjects()
+            thumbnailCache.removeAllObjects(); artworkCache.removeAllObjects(); waveformCache.removeAllObjects()
             showRecovery = false; status = ""
             ocrPages = (try? OCRReading.loadCache(pdfURL: root.appendingPathComponent(newManifest.sourcePDF), cacheDirectory: root.appendingPathComponent("reading"))) ?? [:]
             let restored = recentProjects.first { $0.id == newManifest.id }?.workspace ?? ProjectWorkspace()
@@ -265,7 +270,10 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
         if mode == .recording { events.append(TimedEvent(time: microphone.snapshot.time, action: action)) }
     }
     func finishedStroke(_ id: UUID) { groupedUndoActions.append([.removeStroke(id)]); redoActions = [] }
-    func erase(_ stroke: Stroke) { apply(.removeStroke(stroke.id)); groupedUndoActions.append([.restoreStroke(stroke)]); redoActions = [] }
+    func erase(_ stroke: Stroke) {
+        guard canDraw, let index = scene.strokes.firstIndex(where: { $0.id == stroke.id }) else { return }
+        apply(.removeStroke(stroke.id)); groupedUndoActions.append([.restoreStroke(stroke, index: index)]); redoActions = []
+    }
     func undo() {
         guard canDraw, let actions = groupedUndoActions.popLast() else { return }
         var inverseActions: [SceneAction] = []
@@ -398,41 +406,48 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     func startPlayback(page index: Int, take: Take, from start: Double) {
         guard let root = projectURL else { return }
         if pageIndex != index { loadPage(index) }
-        selectedTakeID = take.id; reviewTask?.cancel(); playbackPaused = false; mode = .loadingPlayback
+        selectedTakeID = take.id; reviewTask?.cancel(); reviewGeneration = UUID(); reviewLoading = false
+        playbackPaused = false; mode = .loadingPlayback
         let matchLoudness = manifest?.matchLoudness == true
         let generation = UUID(); playbackGeneration = generation
-        let clip = FileManager.default.temporaryDirectory.appendingPathComponent("pdf-recorder-preview-\(UUID().uuidString).caf")
+        let cache = playbackAudioCache
+        let cachedWaveform = waveformCache.object(forKey: take.id as NSUUID)?.value
         playbackTask = Task { [weak self] in
-            let worker = Task.detached(priority: .userInitiated) { () throws -> (Timeline, WaveformAnalysis) in
-                try await AudioProcessing.renderPlayback(take: take, source: ProjectStore.location(take.audioPath, in: root), to: clip, matchLoudness: matchLoudness)
+            let worker = Task.detached(priority: .userInitiated) { () throws -> (Timeline, WaveformAnalysis, URL) in
+                let clip = try await cache.preparedURL(take: take, source: ProjectStore.location(take.audioPath, in: root), matchLoudness: matchLoudness)
                 let timeline = Timeline(events: try ProjectStore.events(for: take, at: root), initialViewport: take.initialViewport)
-                let waveform = try AudioAnalysis.analyze(url: ProjectStore.location(take.audioPath, in: root))
-                return (timeline, waveform)
+                let waveform = try cachedWaveform ?? AudioAnalysis.analyze(url: ProjectStore.location(take.audioPath, in: root))
+                return (timeline, waveform, clip)
             }
             do {
                 let loaded = try await withTaskCancellationHandler(operation: { try await worker.value }, onCancel: { worker.cancel() })
                 try Task.checkCancellation()
-                guard let self, self.playbackGeneration == generation else { try? FileManager.default.removeItem(at: clip); return }
-                if let old = self.playbackClip { try? FileManager.default.removeItem(at: old) }
+                guard let self, self.playbackGeneration == generation else { return }
+                let clip = loaded.2
+                self.waveformCache.setObject(WaveformBox(loaded.1), forKey: take.id as NSUUID)
                 self.playbackClip = clip; self.timeline = loaded.0; self.waveform = loaded.1; self.reviewLoading = false
                 self.player = try AVAudioPlayer(contentsOf: clip); self.player?.enableRate = true; self.player?.rate = self.playbackRate
                 self.player?.currentTime = max(0, start - take.playbackStart); self.player?.prepareToPlay()
                 guard self.player?.play() == true else { throw RecorderError.message("This recording could not be played.") }
                 self.time = start; self.scene = self.timeline!.seek(to: start); self.mode = .playing
             } catch {
-                try? FileManager.default.removeItem(at: clip)
                 if self?.playbackGeneration == generation {
                     if !(error is CancellationError) { self?.errorMessage = error.localizedDescription }
+                    self?.reviewLoading = false
                     if self?.mode == .loadingPlayback { self?.mode = .idle }
                 }
             }
         }
     }
     func stopPlayback() {
+        let cancelledPreparation = mode == .loadingPlayback
         playbackGeneration = UUID()
         playbackTask?.cancel(); playbackTask = nil; player?.stop(); player = nil; playbackQueue = []; playbackPaused = false
-        if let clip = playbackClip { try? FileManager.default.removeItem(at: clip); playbackClip = nil }
+        playbackClip = nil
         if mode == .playing || mode == .loadingPlayback { mode = .idle }
+        // Preparing audio cancels the normal review loader. Restore it after Cancel so the
+        // waveform can finish loading and scrubbing remains available for the selected take.
+        if cancelledPreparation { reviewLoading = false; loadReview(renderScene: false) }
     }
     func seek(to value: Double) {
         guard mode == .idle || mode == .playing, let take = selectedTake else { return }

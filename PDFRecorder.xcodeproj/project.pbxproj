@@ -22,6 +22,7 @@
 		3FD38B428789ED12039F91D3 /* BatchExport.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60B856C02130B46ED9D0952E /* BatchExport.swift */; };
 		47B002FCC5CC4EF8264D63E9 /* AudioAnalysis.swift in Sources */ = {isa = PBXBuildFile; fileRef = 08576DF235DAA47C614261DD /* AudioAnalysis.swift */; };
 		4C635835D99B619F774BB681 /* WaveformTimelineView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6D9CC91086F64603698799F1 /* WaveformTimelineView.swift */; };
+		4E0F0BCC4508A2595687C57B /* PlaybackAudioCache.swift in Sources */ = {isa = PBXBuildFile; fileRef = 60A0FF5AEA1289640ECACD63 /* PlaybackAudioCache.swift */; };
 		50D84E61FBCEEFE967F39453 /* PresentationTools.swift in Sources */ = {isa = PBXBuildFile; fileRef = 1103C428D7B240A01C68945C /* PresentationTools.swift */; };
 		5605486737CF10426AB4A7E5 /* PDFRecorderCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */; };
 		61459CE168DD1C0B3C1682FF /* PDFCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */; };
@@ -88,6 +89,7 @@
 		41B71397F74B4AA9B5017516 /* Assets.xcassets */ = {isa = PBXFileReference; lastKnownFileType = folder.assetcatalog; path = Assets.xcassets; sourceTree = "<group>"; };
 		4CD37DF5624E20911ABD65C9 /* PresenterNotesView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PresenterNotesView.swift; sourceTree = "<group>"; };
 		578C0F4FC26458256AEA4FDA /* Rehearsal.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Rehearsal.swift; sourceTree = "<group>"; };
+		60A0FF5AEA1289640ECACD63 /* PlaybackAudioCache.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PlaybackAudioCache.swift; sourceTree = "<group>"; };
 		60B856C02130B46ED9D0952E /* BatchExport.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = BatchExport.swift; sourceTree = "<group>"; };
 		6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRenderer.swift; sourceTree = "<group>"; };
 		6C5FB31ECF059545D6616625 /* AudioExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AudioExporter.swift; sourceTree = "<group>"; };
@@ -139,6 +141,7 @@
 				F05E9C613C480DE156D651FC /* MediaOptions.swift */,
 				99E665FF99543FF9E7E241BD /* Models.swift */,
 				A339DE0C78F0E62A41EE9C1C /* PageReading.swift */,
+				60A0FF5AEA1289640ECACD63 /* PlaybackAudioCache.swift */,
 				1103C428D7B240A01C68945C /* PresentationTools.swift */,
 				8E4A4B4D55F9043687E926DF /* ProjectRecovery.swift */,
 				D4806B2338C0803B2990FD3A /* ProjectStore.swift */,
@@ -305,6 +308,7 @@
 				F2AE82555AF5A407DFF50524 /* MediaOptions.swift in Sources */,
 				29DAFC7A9A0085CE06F875B0 /* Models.swift in Sources */,
 				E57D8632B934532471672C69 /* PageReading.swift in Sources */,
+				4E0F0BCC4508A2595687C57B /* PlaybackAudioCache.swift in Sources */,
 				50D84E61FBCEEFE967F39453 /* PresentationTools.swift in Sources */,
 				DF0CED3E6C8D135899BF0320 /* ProjectRecovery.swift in Sources */,
 				2F60CA1EDE6D3DB03CA04AF6 /* ProjectStore.swift in Sources */,

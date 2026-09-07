@@ -9,18 +9,33 @@ codesign --verify --deep --strict 'build/PDF Recorder.app'
 lipo -archs 'build/PDF Recorder.app/Contents/MacOS/PDF Recorder'
 ```
 
-Tests cover timeline seeking, erase/undo, a simulated 30-minute sample clock
-with pauses, coordinate round trips, independent retakes and selection,
-portable projects, recovery, invalid paths and metadata, rotated/mixed pages,
-scans with embedded annotations, and real H.264/AAC MP4 export. Presenter tests
-cover legacy project migration and new metadata round trips, search and filters,
-export exclusions, next-unrecorded navigation, notes export, playback skip bounds,
-countdown cancellation, and audio-only AAC export.
+The automated suite uses generated PDFs and audio. It never launches the
+application, starts a microphone or plays through an audio output device.
+Controller tests use isolated storage, disabled device discovery and fake
+playback. Real AVFoundation encoding and Vision OCR run on fixtures.
 
-The export test checks duration, 1080p dimensions, frame rate, audio codec,
-and agreement between an exported frame and the shared renderer. macOS media
-services must be available; a restricted process sandbox may block its encoder.
-Do not silently skip the test when the encoder is unavailable.
+Coverage includes:
+
+- Timeline reconstruction, checkpointed long seeks, chunked event logs,
+  annotation replay/layer order, rotated/mixed geometry, vector detail at deep
+  zoom, exact text matches, outlines, page labels and synthetic scanned-page OCR.
+- A simulated 30-minute sample clock with pauses; source-time trims, loops,
+  markers, A/B preview independent of export selection, and presentation
+  pause/resume with the remaining page queue intact.
+- Portable formats v1/v2/v3, preferences and workspace round trips, take Trash,
+  snapshot protection, missing-media isolation/retry, partial recovery and
+  Save As rescue from a read-only original project.
+- Waveform silence/clipping, gain, volume matching, fades and source preservation;
+  playback cache reuse/invalidation/eviction, interrupted preparation, cleanup
+  during preparation and recovery of scrubbing after cancelled/failed preparation.
+- Real H.264/AAC MP4 and AAC M4A output, dimensions, frame rate, duration,
+  agreement with the shared renderer, and the scene at a trimmed start.
+- Page-range parsing, ordered batch export, cancellation, failure atomicity and
+  preservation of prior output. Rehearsal timing/history, teleprompter clocks,
+  trim-aware pacing, synthetic input feedback and balanced idle-sleep protection.
+
+macOS media services must be available; a restricted process sandbox may block
+the encoder. Do not silently skip the export tests when this happens.
 
 To retain synthetic test artifacts for inspection:
 
@@ -28,39 +43,60 @@ To retain synthetic test artifacts for inspection:
 PDFRECORDER_TEST_ARTIFACTS="$PWD/build/QA" swift test
 ```
 
-## Live acceptance checklist
+## Interactive acceptance checklist
 
-These checks require launching the built app and access to a real microphone.
-A simulated clock test does not establish live microphone latency or drift.
+These checks remain open. Application launch and microphone testing were declined
+by the user, so agent verification uses the automated boundaries above. A passing
+synthetic clock test does not establish real microphone latency or drift.
 
-- [ ] Open the app at its minimum window size; check light/dark appearances.
-- [ ] Check keyboard shortcuts, focus, tool labels, and Reduce Motion.
-- [ ] Add titles, notes, bookmarks, and targets; save and reopen to verify retention.
-- [ ] Search PDF text and notes, combine filters, and jump to the next unrecorded page.
-- [ ] Practice with notes, marks, and timing targets; change pages and end practice.
-      Verify no microphone permission prompt, audio file, or new take is created.
-- [ ] Cancel both countdown lengths before zero; verify capture never starts.
-- [ ] Review at each playback speed and use ten-second skips; verify gestures follow audio.
-- [ ] Exclude a recorded page; check combined playback and both export formats skip it.
-- [ ] Export notes and an M4A; check page order and confirm notes stay out of media exports.
-- [ ] Open a three-page PDF and record each page with voice and gestures.
-- [ ] Record two new takes on page two, choose the first, save, quit, and reopen.
-- [ ] Verify pointer, pen, highlighter, eraser, undo, pinch zoom, and pan while recording.
-- [ ] Pause while speaking/moving, resume, and confirm paused time is absent.
-- [ ] Scrub backwards and forwards; compare the scene to normal playback.
-- [ ] Export and play the MP4 in QuickTime, verifying sound and page order.
-- [ ] Deny microphone permission, then enable it in System Settings and retry.
-- [ ] Unplug a USB microphone while recording; confirm partial-take retention.
-- [ ] Force-quit during a disposable recording and recover the take on reopening.
-- [ ] Test an unwritable project location, insufficient disk space, and cancelled export.
-- [ ] Record 30 real minutes with timed spoken/click cues near the beginning and end;
+- [ ] Open at the minimum size and in Split View; independently collapse sidebars,
+      expand notes, and check light/dark mode and Reduce Motion.
+- [ ] Complete the workflow using the keyboard. Check command search, text-editing
+      Undo/Redo, canvas focus, page-number entry and presentation-clicker keys.
+- [ ] Use VoiceOver on PDF text, take cards, waveform controls and recording-state
+      announcements; check focus order and larger controls.
+- [ ] Pin projects, set preferences, move a saved project, quit and reopen;
+      verify previews, page/viewport restoration and encrypted-PDF passwords.
+- [ ] Select/copy native and OCR text, find exact matches, navigate PDF outlines
+      and printed labels, and cancel OCR between pages.
+- [ ] Practice with custom targets and a teleprompter; pause, scroll manually,
+      revisit pages and check the saved actual/planned report. Verify practice
+      creates no audio, event journal, take or microphone permission prompt.
+- [ ] Choose an audience screen, enter fullscreen, use a clicker, disconnect it
+      and reopen the audience view. Verify private notes/controls never appear.
+- [ ] Explicitly check a microphone; confirm the resolved device name, silence,
+      quiet/clipping feedback, and verify no audio file is saved.
+- [ ] Cancel countdown before zero; then record three pages with voice/gestures.
+      Redo page two, audition alternatives, select an earlier take, save and reopen.
+- [ ] Draw overlapping marks, shapes and labels at several zooms; erase a lower
+      mark, undo/redo, clear/undo, and compare preview, scrubbed and exported scenes.
+- [ ] Pause while speaking/moving; resume and verify paused time is absent and
+      prompter pause state agrees. Test permission denial and USB disconnection.
+- [ ] Trim a take, compare A/B at matching offsets, add markers, enable a loop,
+      vary playback speed, and pause/resume presentation playback across pages.
+- [ ] Cancel long-take playback preparation and immediately scrub/replay; change
+      gain/matching, repeat A/B comparisons and clear the playback cache.
+- [ ] Delete/undo a take, restore Trash/snapshots, isolate and retry missing media,
+      and recover a readable partial take.
+- [ ] Export ranges, chapters and separate pages in every preset; cancel mid-batch
+      and confirm no published partial folder or replacement of earlier output.
+- [ ] Play MP4/M4A in QuickTime; check page order, selected takes, gesture alignment,
+      fades and volume across page boundaries.
+- [ ] Exercise force-quit recovery, unwritable locations and insufficient disk;
+      confirm completed takes remain and Save As rescues unsaved metadata.
+- [ ] Record 30 real minutes with timed spoken/click cues near beginning/end;
       measure audio/visual alignment, targeting less than 100 ms at both ends.
-- [ ] Run the app on an Intel Mac and on the minimum supported macOS 14 version.
+- [ ] Run on Intel hardware and the minimum supported macOS 14 version.
 
-## Current local evidence
+## Current evidence
 
-The 0.2 implementation has passed 20 automated tests and built a signed universal
-application on Apple Silicon. Signature verification and both architecture slices
-pass locally. Intel is cross-compiled, not yet hardware-tested.
-Interactive UI, physical microphone, and real 30-minute checks remain pending.
-See CI for verification of the latest commit.
+The 0.3.0 implementation passed **76 automated tests** and a universal Release
+build locally on Apple Silicon with Xcode 26.6. Both `arm64` and `x86_64` slices
+are present; strict deep signature verification passes. The ad-hoc signed app
+occupies approximately **12 MB** on disk and its ZIP **4 MB**, excluding projects.
+The macOS CI workflow runs the same tests, universal build and signature checks;
+consult the run for the commit being reviewed.
+
+Intel is cross-compiled, not hardware-tested. Interactive UI, VoiceOver, physical
+microphone, multi-display and real 30-minute checks remain pending. See the
+[implementation ledger](IMPLEMENTATION-0.3.md) for each requirement.

@@ -42,6 +42,19 @@ final class WorkspaceFeatureTests: XCTestCase {
         XCTAssertEqual(restored[0].path, entries[1].path)
         XCTAssertFalse(restored.contains { $0.id == entries[2].id || $0.id == entries[3].id })
     }
+    func testBatchDestinationKeepsImportedTitlesInsideChosenFolder() {
+        let parent = URL(fileURLWithPath: "/tmp/Chosen Folder", isDirectory: true)
+        for title in ["../../Outside", "/Volumes/Elsewhere", "..", "", "lecture\nnotes:2026", String(repeating: "📚", count: 100)] {
+            let url = BatchExport.destination(in: parent, title: title)
+            XCTAssertEqual(url.deletingLastPathComponent().standardizedFileURL.path, parent.standardizedFileURL.path)
+            XCTAssertFalse(url.lastPathComponent.contains("/"))
+            XCTAssertFalse(url.lastPathComponent.contains(":"))
+            XCTAssertFalse(url.lastPathComponent.contains("\n"))
+            XCTAssertLessThan(url.lastPathComponent.utf8.count, 255)
+        }
+        XCTAssertTrue(BatchExport.destination(in: parent, title: "..").lastPathComponent.hasPrefix("Presentation — Pages "))
+    }
+
     func testExportPageRangesDeduplicateAndValidateBounds() throws {
         XCTAssertEqual(try ExportPageSelection.parse("3-5, 1, 3, 8", pageCount: 8), [0, 2, 3, 4, 7])
         XCTAssertEqual(try ExportPageSelection.parse(" 2 - 2 ", pageCount: 3), [1])

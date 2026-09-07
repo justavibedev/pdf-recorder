@@ -4,7 +4,7 @@ A native, offline macOS app for recording PDF presentations one page at a time.
 
 Prepare notes, rehearse, then record your voice, pointer, pen, highlights, and zoom/pan. Keep multiple takes per page, choose your favorites, and export one MP4 or an audio study file. Built for students, free for everyone.
 
-**0.2 development preview:** builds as a native universal Mac app. Core and synthetic media tests run locally and in CI. Live microphone, UI, and long-session acceptance checks remain open. This is not yet a notarized public release.
+**0.3 development preview:** builds as a native universal Mac app. Core and synthetic media tests run locally and in CI. Live microphone, UI, and long-session acceptance checks remain open. This is not yet a notarized public release.
 
 ## What you can do
 
@@ -20,59 +20,72 @@ Existing PDF annotations stay visible. The source file is never changed.
 
 ## For students and presenters
 
-- **Private presenter notes and page titles.** Write a script beside each page,
-  enlarge the text while presenting, and export your notes as Markdown.
-- **Practice without recording.** Rehearse with drawing tools, notes, and a
-  per-page timer. Practice never starts the microphone or creates a take.
-- **Timing targets.** Plan how long each page should take, see your total planned
-  time, and get remaining-time or over-target feedback during practice and recording.
-- **Find your place.** Search PDF text, page titles, and notes; bookmark key pages;
-  filter recorded or unfinished pages; jump to the next unrecorded page.
-  Scanned pages are searchable only if the PDF already contains text; there is no OCR.
-- **Recording countdown.** Choose off, three, or five seconds. Cancel before
-  capture starts, using the button or Escape while the canvas is focused.
-- **Faster revision.** Review at 0.75×–2× speed and jump back or forward ten seconds.
-  Export stays at the original recorded speed.
-- **Choose what to share.** Exclude pages from combined playback and export while
-  keeping their takes, or export AAC audio in an M4A file for listening on the go.
-- **Focus mode.** Hide the page sidebar to make more room for your PDF and notes.
+- **Refine your takes.** Trim beginnings and endings without changing the source.
+  Use a waveform with silence/clipping feedback, label and favorite takes, mark
+  corrections, loop A–B sections, and compare takes at the same position.
+- **Choose what you share.** Auditioning a take never changes the export selection.
+  Use **Use in Export** when ready. Export included pages, the current page,
+  a custom range, or the current PDF chapter, together or as separate files.
+- **Better audio.** An explicit **Check Microphone** action reports silence,
+  quiet input, and clipping without saving audio. Optional speech-level matching,
+  per-take volume, and short edge fades apply to playback and export.
+- **Present with confidence.** Write private page notes, run a teleprompter with
+  an adjustable reading guide, and show a clean audience canvas on another display.
+  The presenter keeps notes, controls, timing, and next-page preview.
+- **Rehearse without recording.** Use drawing tools and custom timing targets.
+  Review actual versus planned time, repeated page visits, and total overruns;
+  keep rehearsal history and export Markdown reports. Practice never starts a mic.
+- **Find what matters.** Search titles, notes, and PDF text; select/copy text and
+  see exact matches. Navigate the document outline and printed page labels.
+  Opt into offline OCR for scanned pages without changing the source PDF.
+- **Explain visually.** Adjust pen width and opacity, draw arrows and shapes,
+  add text labels, erase, undo, redo, or clear marks in one undoable action.
+  PDF vectors render sharply at the current zoom and output resolution.
+- **Continue later.** Recent and pinned projects show previews and progress;
+  reopen at your last page and viewport. Microphone, countdown, playback speed,
+  notes size, larger controls, and sidebar settings persist between launches.
+- **Recover your work.** Deleted takes go to project Trash. The Storage & Recovery
+  center shows disk use, unused takes, unfinished recordings, unavailable files,
+  and restorable snapshots. Save As can rescue notes from a read-only project.
+- **Fit your workspace.** Collapse either sidebar, widen notes, use compact layouts,
+  switch tools from the keyboard, or find actions with **⌘K**. Canvas text is
+  exposed to VoiceOver, and recording-state changes are announced.
 
-Page titles, notes, bookmarks, timing targets, and export choices autosave to the
-project. Notes stay out of video and audio exports, but are included in the project
-package and an explicitly exported notes document. Playback speed, countdown,
-filters, and layout preferences last for the current app session.
+Notes and review metadata autosave inside the project. Notes, OCR text, and
+rehearsal reports are included when sharing the project package; private notes
+and search/selection overlays never enter audio or video exports.
 
 ## A simple workflow
 
-1. **Open a PDF.** Drop it into the window or press **⌘O**.
-2. **Prepare and record.** Add notes in **Notes & Timing**, optionally practice,
-   then choose your microphone and press **Record Page**. Capture starts after
-   your selected countdown.
-3. **Mark what matters.** Point, draw, highlight, pinch to zoom, or scroll to pan.
-4. **Keep your best take.** Stop to save. Try another take whenever you need to;
-   select the one you want from the take list. Right-click a take to delete it.
-5. **Save and export.** Save Project creates a portable `.pdfrecorder` package.
-   Export combines selected takes as video or audio, skipping unrecorded and
-   excluded pages. The confirmation shows included and skipped counts.
+1. **Open a PDF** using **⌘O**, drag and drop, or your recent-project library.
+2. **Prepare.** Add notes and targets. Optionally recognize scanned text, practice,
+   or open the audience display from **Presenting**.
+3. **Record.** Select a microphone in **Recording & audio**. An optional microphone
+   check saves no audio. Press **Record Page**; capture begins after your countdown.
+4. **Review.** Stop to autosave. Listen to takes, trim the kept range, add review
+   markers, and compare A/B. Choose **Use in Export** for the version you want.
+5. **Save and share.** Save Project makes a portable `.pdfrecorder` package.
+   Export MP4 or M4A, choose pages and quality, and review included/skipped counts.
+   Batch output appears only when every page succeeds.
 
-Page navigation locks during recording. Pausing freezes the scene; resume before
-drawing or moving again. Starting a take clears app-created marks and keeps the
-current zoom/pan. Your earlier takes and the source PDF remain intact.
+Page navigation locks during recording. Pausing freezes the scene and excludes
+pause time. Every new take starts with clean app-created marks and the current
+viewport. Your earlier takes and source PDF remain intact.
 
 ## Principles
 
 - Local files, no account, no server, no analytics.
 - No subscriptions, watermarks, or artificial recording limits.
-- Native SwiftUI/AppKit, PDFKit, and AVFoundation; no third-party runtime dependencies.
+- Native SwiftUI/AppKit, PDFKit, AVFoundation, and Vision; no third-party runtime dependencies.
 - Page-level retakes so one mistake never means starting the whole presentation over.
 
 ## Requirements
 
-macOS 14 or later. Build with Xcode 15 or later. Apple Silicon and Intel are targeted.
+macOS 14 or later. Build with Xcode 15.4 or later. Apple Silicon and Intel are targeted.
 
-The universal 0.2 development app is approximately **6 MB** (**2 MB** zipped),
-excluding your PDFs and recordings. It uses Apple's installed frameworks rather than bundling a
-browser or video toolchain. Actual size varies with Xcode and build settings.
+The app uses Apple’s installed frameworks rather than bundling a browser,
+external video toolchain, or OCR service. Build size excludes your PDFs and
+recordings; see the validation ledger for the measured local build.
 
 ## Get the app
 
@@ -116,10 +129,20 @@ xcodegen generate
 | Bookmark page | ⌘⇧B |
 | Next unrecorded page | ⌘⇧U |
 | Toggle focus mode | ⌘⇧F |
+| Search commands | ⌘K |
+| Find in PDF and notes | ⌘F |
+| Project library | ⌘⇧O |
+| Toggle page sidebar / inspector | ⌘⌥1 / ⌘⌥2 |
+| Audience display | ⌘⇧D |
+| Hold / resume teleprompter | ⌘⇧Space |
 
 With the canvas focused, arrow keys navigate and Space pauses/resumes recording
 or playback, and ends practice. Escape cancels the countdown. Pinch zooms;
-scroll pans; ⌘-scroll also zooms. These canvas keys do not intercept typing in notes.
+scroll pans; ⌘-scroll also zooms. Canvas tool keys are P (pen), H (highlighter), V (pointer), E (eraser),
+M (pan), S (select text), L (line), A (arrow), R (rectangle), O (ellipse), and
+T (text label). +/− zoom; 0 fits the page. Page Up/Down supports presentation
+clickers. These keys do not intercept typing in notes. Standard text Undo/Redo
+stays available when editing text; the canvas handles annotation Undo/Redo.
 
 ## Design and efficiency
 
@@ -128,28 +151,41 @@ Rare UI's Folder Component and Step Player**, under its MIT license. It does not
 embed React, shadcn, or a web view. See [third-party notices](THIRD_PARTY_NOTICES.md).
 Animations respect Reduce Motion.
 
-Microphone sample counts drive the visual timeline. Audio is streamed to disk,
-recovery events are appended incrementally, and idle playback timers stop.
-Thumbnails and page artwork have bounded caches. Export processes one PDF page
-and one video frame at a time. The PDF is rendered to a cached bitmap up to
-3840 pixels on its longest edge; deep zoom can soften text.
-PDF text extraction runs in the background only when you search; its text index
-is cached for the open document. Audio-only export does not render video frames.
+Microphone sample counts drive the visual timeline. Audio streams to disk,
+recovery events append incrementally, and idle timers stop. A bounded set of
+scene checkpoints accelerates backward seeking; export reads events in chunks
+one page at a time. Waveform analysis and export preparation run off the UI thread.
+PDF backgrounds cache the visible viewport at output resolution, with bounded
+caches for editor and audience displays. OCR uses Apple Vision on-device and
+caches each completed page with a source fingerprint.
+
+Prepared playback audio is reused between listens and A/B comparisons. Its local
+disk cache retains at most three clips within 512 MiB, except that a single larger
+clip may be retained alone. Clear it from **Storage & Recovery**; source recordings
+are unaffected.
+
+Recording and export prevent idle system sleep, then release that protection
+when finished or cancelled. This does not override deliberate sleep or shutdown.
 
 ## Privacy and storage
 
-The app has no network code, accounts, analytics, or telemetry. It requests only
-microphone permission; recording is limited to the PDF canvas and your microphone.
+The app has no network code, accounts, analytics, or telemetry. It requests
+microphone permission only after you explicitly start a recording or microphone
+check. A check monitors levels without creating an audio file. Recording is
+limited to the PDF canvas and your microphone.
 
 Until you choose Save Project, work is autosaved under
 `~/Library/Application Support/PDF Recorder/Recovery/`. Unsaved projects appear
 on the next launch. A completed take is kept even if a later recording fails.
 An interrupted take can recover its readable audio and last saved gestures.
 
-Project packages contain unencrypted microphone audio, even when the source PDF
-is encrypted. Passwords are never saved. Raw audio uses approximately **346 MB
+Project packages contain unencrypted microphone audio, notes, and optional OCR
+text, even when the source PDF is encrypted. Recent-project previews are not
+created for encrypted PDFs. Passwords are never saved. Raw audio uses approximately **346 MB
 per hour**; take history increases storage. No artificial duration limit is imposed,
-but available disk space and memory still apply.
+but available disk space and memory still apply. Trash retains media until you
+explicitly delete it permanently. Snapshots share media files and prevent purging
+takes they still reference.
 
 ## Validation and contributing
 
@@ -158,7 +194,9 @@ See [validation and the live checklist](docs/VALIDATION.md),
 Synthetic media tests do not use the microphone. They verify MP4 dimensions,
 frame rate, codec, duration, frame agreement with the renderer, and audio-only
 AAC export. Tests also cover search, bookmarks, export exclusions, countdown
-cancellation, and upgrading projects from format v1 to v2.
+cancellation, and upgrading projects from formats v1/v2 to v3. Headless controller tests use
+fake playback and disabled device discovery; they never launch the app or use
+a microphone. See the [0.3 implementation ledger](docs/IMPLEMENTATION-0.3.md).
 
 Webcam, system audio, cloud sharing, transcription, and continuous recording
 across pages are outside the first release.
