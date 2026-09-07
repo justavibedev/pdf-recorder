@@ -1,7 +1,7 @@
 import SwiftUI
 import PDFRecorderCore
 
-@main struct PDFRecorderApp: App {
+@main @MainActor struct PDFRecorderApp: App {
     @NSApplicationDelegateAdaptor(AppDelegate.self) private var delegate
     @StateObject private var model = AppModel()
     var body: some SwiftUI.Scene {

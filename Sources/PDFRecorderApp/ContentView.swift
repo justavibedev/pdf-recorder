@@ -3,7 +3,7 @@ import PDFRecorderCore
 
 private let accent = Color(red: 0.22, green: 0.42, blue: 0.96)
 
-struct ContentView: View {
+@MainActor struct ContentView: View {
     @ObservedObject var model: AppModel
     @State private var pageNumber = "1"
     var body: some View {

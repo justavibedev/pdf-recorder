@@ -2,7 +2,7 @@ import AppKit
 import SwiftUI
 import PDFRecorderCore
 
-struct PDFCanvas: NSViewRepresentable {
+@MainActor struct PDFCanvas: NSViewRepresentable {
     @ObservedObject var model: AppModel
     func makeNSView(context: Context) -> CanvasView { let view = CanvasView(); view.model = model; return view }
     func updateNSView(_ view: CanvasView, context: Context) { view.model = model; view.needsDisplay = true }

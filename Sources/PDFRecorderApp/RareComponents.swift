@@ -67,7 +67,7 @@ private struct FolderFlap: Shape {
 }
 
 /// A bounded, seekable view of the recorded pages. The active dot expands into a progress track.
-struct RareStepPlayer: View {
+@MainActor struct RareStepPlayer: View {
     @ObservedObject var model: AppModel
     @Environment(\.accessibilityReduceMotion) private var reduceMotion
     private var items: [(page: Int, take: Take)] { model.manifest?.selectedTakes ?? [] }
