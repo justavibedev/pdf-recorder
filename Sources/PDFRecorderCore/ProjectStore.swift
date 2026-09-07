@@ -48,10 +48,38 @@ public enum ProjectStore {
     public static func save(_ manifest: ProjectManifest, at root: URL) throws {
         try write(manifest, to: root.appendingPathComponent("manifest.json"))
     }
-    public static func load(at root: URL) throws -> ProjectManifest {
+    /// Save current in-memory work to a new location without writing the original.
+    public static func saveCopy(from root: URL, to destination: URL, manifest: ProjectManifest) throws {
+        let original = root.standardizedFileURL.resolvingSymlinksInPath(), target = destination.standardizedFileURL.resolvingSymlinksInPath()
+        guard original != target, !target.path.hasPrefix(original.path + "/"), !original.path.hasPrefix(target.path + "/") else {
+            throw RecorderError.message("Choose a location outside the current project package.")
+        }
+        let staged = destination.deletingLastPathComponent().appendingPathComponent(".pdfrecorder-save-\(UUID().uuidString)")
+        defer { try? FileManager.default.removeItem(at: staged) }
+        try FileManager.default.copyItem(at: root, to: staged)
+        // A copied read-only project must become editable at its new location.
+        // Change the staged copy only; never follow symlinks or touch the source.
+        var copiedURLs = [staged]
+        if let enumerator = FileManager.default.enumerator(at: staged, includingPropertiesForKeys: [.isSymbolicLinkKey]) {
+            for case let url as URL in enumerator {
+                if (try url.resourceValues(forKeys: [.isSymbolicLinkKey])).isSymbolicLink == true { enumerator.skipDescendants() }
+                else { copiedURLs.append(url) }
+            }
+        }
+        for url in copiedURLs {
+            let attributes = try FileManager.default.attributesOfItem(atPath: url.path)
+            let permissions = (attributes[.posixPermissions] as? NSNumber)?.intValue ?? 0o600
+            let directory = attributes[.type] as? FileAttributeType == .typeDirectory
+            try FileManager.default.setAttributes([.posixPermissions: permissions | (directory ? 0o700 : 0o600)], ofItemAtPath: url.path)
+        }
+        try save(manifest, at: staged)
+        if FileManager.default.fileExists(atPath: destination.path) { _ = try FileManager.default.replaceItemAt(destination, withItemAt: staged) }
+        else { try FileManager.default.moveItem(at: staged, to: destination) }
+    }
+    public static func load(at root: URL, allowingMissingMedia: Bool = false) throws -> ProjectManifest {
         var m = try decode(ProjectManifest.self, from: root.appendingPathComponent("manifest.json"))
-        guard (1...2).contains(m.version) else { throw RecorderError.message("This project uses an unsupported format version (\(m.version)).") }
-        m.version = 2
+        guard (1...3).contains(m.version) else { throw RecorderError.message("This project uses an unsupported format version (\(m.version)).") }
+        m.version = 3
         guard !m.pages.isEmpty, m.pages.count <= 100_000, m.sourcePDF == "source.pdf" else { throw RecorderError.message("The project has an invalid page list or source path.") }
         _ = try location(m.sourcePDF, in: root)
         var ids = Set<UUID>()
@@ -63,12 +91,14 @@ public enum ProjectStore {
                 throw RecorderError.message("A page refers to a missing selected take.")
             }
             for take in page.takes {
+                try validateTake(take)
                 guard ids.insert(take.id).inserted, take.duration.isFinite, take.duration > 0,
                       take.audioPath == "takes/\(take.id.uuidString)/audio.caf",
                       take.eventsPath == "takes/\(take.id.uuidString)/events.json",
                       valid(take.initialViewport) else { throw RecorderError.message("A take contains invalid metadata.") }
                 for path in [take.audioPath, take.eventsPath] {
-                    guard FileManager.default.fileExists(atPath: try location(path, in: root).path) else {
+                    let url = try location(path, in: root)
+                    guard allowingMissingMedia || FileManager.default.fileExists(atPath: url.path) else {
                         throw RecorderError.message("A recording file is missing: \(path)")
                     }
                 }
@@ -77,12 +107,25 @@ public enum ProjectStore {
         return m
     }
     public static func events(for take: Take, at root: URL) throws -> [TimedEvent] {
-        let events = try decode([TimedEvent].self, from: location(take.eventsPath, in: root))
+        let events = try EventLogReader.readAll(url: location(take.eventsPath, in: root))
         try validate(events)
         return events
     }
     private static func valid(_ p: Point) -> Bool { p.x.isFinite && p.y.isFinite && abs(p.x) < 1e6 && abs(p.y) < 1e6 }
     private static func valid(_ v: Viewport) -> Bool { v.zoom.isFinite && (1...8).contains(v.zoom) && valid(v.offset) }
+    public static func validateTake(_ take: Take) throws {
+        let start = take.trimStart ?? 0, end = take.trimEnd ?? take.duration, gain = take.gainDB ?? 0
+        guard start.isFinite, end.isFinite, gain.isFinite, start >= 0, end <= take.duration, end - start >= 0.05,
+              (-60...24).contains(gain) else { throw RecorderError.message("A take has invalid trim or volume settings.") }
+        if let loop = take.loopRange {
+            guard loop.start.isFinite, loop.end.isFinite, loop.start >= start, loop.end <= end, loop.end > loop.start else {
+                throw RecorderError.message("A review loop is outside the trimmed take.")
+            }
+        }
+        for marker in take.reviewMarkers ?? [] {
+            guard marker.time.isFinite, marker.time >= 0, marker.time <= take.duration else { throw RecorderError.message("A review marker has an invalid timestamp.") }
+        }
+    }
     public static func validate(_ events: [TimedEvent]) throws {
         var last = 0.0
         for event in events {
@@ -92,6 +135,7 @@ public enum ProjectStore {
             case .viewport(let v): okay = okay && valid(v)
             case .beginStroke(let s), .restoreStroke(let s):
                 okay = okay && s.width.isFinite && s.width > 0 && s.width < 1 && s.points.allSatisfy(valid)
+                if let opacity = s.opacity { okay = okay && opacity.isFinite && (0...1).contains(opacity) }
             case .extendStroke(_, let p): okay = okay && valid(p)
             case .removeStroke: break
             }

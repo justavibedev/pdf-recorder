@@ -1,5 +1,6 @@
 import AppKit
 import PDFKit
+import CoreText
 
 /// All page coordinates use the displayed (rotation-corrected) page: origin bottom-left, range 0...1.
 public struct PageGeometry {
@@ -25,9 +26,15 @@ public struct PageGeometry {
 }
 
 public struct PageArtwork {
+    /// A bounded preview for thumbnails and OCR. Canvas and export draw the PDF itself at their output resolution.
     public let image: CGImage
     public let size: CGSize
-    public init(page: PDFPage, maximumDimension: CGFloat = 3840) throws {
+    private let page: PDFPage
+    private let renderCache = ArtworkRenderCache()
+    // PDFPage does not retain its document. Keep the owner alive for lazy image and annotation resources.
+    private let document: PDFDocument?
+    public init(page: PDFPage, maximumDimension: CGFloat = 1280) throws {
+        self.page = page; document = page.document
         let bounds = page.bounds(for: .cropBox)
         let rotated = abs(page.rotation % 180) == 90
         size = rotated ? CGSize(width: bounds.height, height: bounds.width) : bounds.size
@@ -42,6 +49,48 @@ public struct PageArtwork {
         }
         self.image = image
     }
+    public func draw(in context: CGContext, rect: CGRect) {
+        let clip = context.boundingBoxOfClipPath.intersection(rect)
+        guard !clip.isNull, !clip.isEmpty else { return }
+        let transform = context.ctm
+        let scaleX = hypot(transform.a, transform.b), scaleY = hypot(transform.c, transform.d)
+        let width = Int(ceil(clip.width * scaleX)), height = Int(ceil(clip.height * scaleY))
+        // Cache only the visible viewport at actual output resolution. Pointer movement does not redraw the PDF.
+        // Zooming/panning invalidates this image. Huge output contexts use vectors directly instead of downscaling.
+        if width > 0, height > 0, width <= 8192, height <= 8192, width * height <= 16_777_216 {
+            let key = ArtworkRenderCache.Key(clip: clip, pageRect: rect, width: width, height: height)
+            if let image = renderCache.image(for: key) { context.draw(image, in: clip); return }
+            if let rendered = CGContext(data: nil, width: width, height: height, bitsPerComponent: 8, bytesPerRow: 0,
+                                       space: CGColorSpaceCreateDeviceRGB(), bitmapInfo: CGImageAlphaInfo.premultipliedLast.rawValue) {
+                rendered.scaleBy(x: CGFloat(width) / clip.width, y: CGFloat(height) / clip.height)
+                rendered.translateBy(x: -clip.minX, y: -clip.minY)
+                rendered.setFillColor(CGColor(gray: 1, alpha: 1)); rendered.fill(clip)
+                drawVectors(in: rendered, rect: rect)
+                if let image = rendered.makeImage() { renderCache.set(image, for: key); context.draw(image, in: clip); return }
+            }
+        }
+        drawVectors(in: context, rect: rect)
+    }
+    private func drawVectors(in context: CGContext, rect: CGRect) {
+        context.saveGState()
+        context.clip(to: rect)
+        context.translateBy(x: rect.minX, y: rect.minY)
+        context.scaleBy(x: rect.width / size.width, y: rect.height / size.height)
+        // PDFKit draws vectors at the destination's resolution and decodes scanned images only as needed.
+        // draw(with:to:) includes the crop offset, page rotation and existing PDF annotations.
+        page.draw(with: .cropBox, to: context)
+        context.restoreGState()
+        withExtendedLifetime(document) {}
+    }
+}
+
+private final class ArtworkRenderCache {
+    struct Key: Equatable { let clip: CGRect, pageRect: CGRect; let width: Int, height: Int }
+    private let lock = NSLock()
+    private var key: Key?
+    private var value: CGImage?
+    func image(for key: Key) -> CGImage? { lock.lock(); defer { lock.unlock() }; return self.key == key ? value : nil }
+    func set(_ value: CGImage, for key: Key) { lock.lock(); defer { lock.unlock() }; self.key = key; self.value = value }
 }
 
 public enum SceneRenderer {
@@ -63,7 +112,7 @@ public enum SceneRenderer {
         let rect = geometry.pageRect
         context.setFillColor(CGColor(gray: 1, alpha: 1)); context.fill(rect)
         context.interpolationQuality = .high
-        context.draw(artwork.image, in: rect)
+        artwork.draw(in: context, rect: rect)
         context.saveGState()
         context.clip(to: rect)
         for stroke in scene.strokes {
@@ -74,11 +123,11 @@ public enum SceneRenderer {
             let width = stroke.width * rect.width
             context.setLineWidth(width)
             context.setLineCap(.round); context.setLineJoin(.round)
-            if stroke.tool == .highlighter {
-                context.setBlendMode(.multiply)
-                context.setAlpha(0.36)
-            }
-            if stroke.points.count == 1 {
+            context.setAlpha(max(0.02, min(1, stroke.opacity ?? (stroke.tool == .highlighter ? 0.36 : 1))))
+            if stroke.tool == .highlighter { context.setBlendMode(.multiply) }
+            if let shape = AnnotationGeometry.shape(of: stroke) {
+                drawShape(shape, stroke: stroke, geometry: geometry, context: context)
+            } else if stroke.points.count == 1 {
                 let p = geometry.toCanvas(first)
                 context.fillEllipse(in: CGRect(x: p.x - width / 2, y: p.y - width / 2, width: width, height: width))
             } else {
@@ -100,6 +149,33 @@ public enum SceneRenderer {
             context.drawPath(using: .fillStroke)
         }
         context.restoreGState()
+    }
+    private static func drawShape(_ shape: AnnotationShape, stroke: Stroke, geometry: PageGeometry, context: CGContext) {
+        guard let first = stroke.points.first else { return }
+        let a = geometry.toCanvas(first), b = geometry.toCanvas(stroke.points.last ?? first)
+        let rect = CGRect(x: min(a.x, b.x), y: min(a.y, b.y), width: abs(b.x - a.x), height: abs(b.y - a.y))
+        switch shape {
+        case .rectangle: context.stroke(rect)
+        case .ellipse: context.strokeEllipse(in: rect)
+        case .line, .arrow:
+            context.beginPath(); context.move(to: a); context.addLine(to: b)
+            if shape == .arrow {
+                let length = max(12, stroke.width * geometry.pageRect.width * 5)
+                let angle = atan2(b.y - a.y, b.x - a.x)
+                for delta in [-Double.pi / 6, Double.pi / 6] {
+                    context.move(to: b)
+                    context.addLine(to: CGPoint(x: b.x - cos(angle + delta) * length, y: b.y - sin(angle + delta) * length))
+                }
+            }
+            context.strokePath()
+        case .text:
+            let font = CTFontCreateWithName("Helvetica" as CFString, max(8, stroke.width * geometry.pageRect.width * 5), nil)
+            let attributes = [kCTFontAttributeName: font, kCTForegroundColorAttributeName: color(stroke.color)] as CFDictionary
+            let text = CFAttributedStringCreate(nil, (stroke.text ?? "Text") as CFString, attributes)!
+            let line = CTLineCreateWithAttributedString(text)
+            context.textMatrix = .identity; context.textPosition = a
+            CTLineDraw(line, context)
+        }
     }
     public static func image(artwork: PageArtwork, scene: Scene, size: CGSize) -> CGImage? {
         guard let context = CGContext(data: nil, width: Int(size.width), height: Int(size.height), bitsPerComponent: 8,

@@ -7,6 +7,9 @@ let package = Package(
     products: [.library(name: "PDFRecorderCore", targets: ["PDFRecorderCore"])],
     targets: [
         .target(name: "PDFRecorderCore"),
-        .testTarget(name: "PDFRecorderCoreTests", dependencies: ["PDFRecorderCore"])
+        .target(name: "PDFRecorderAppSupport", dependencies: ["PDFRecorderCore"], path: "Sources/PDFRecorderApp",
+                exclude: ["PDFRecorderApp.swift", "Assets.xcassets", "Info.plist", "PDFRecorder.entitlements"]),
+        .testTarget(name: "PDFRecorderCoreTests", dependencies: ["PDFRecorderCore"]),
+        .testTarget(name: "PDFRecorderAppTests", dependencies: ["PDFRecorderAppSupport", "PDFRecorderCore"])
     ]
 )

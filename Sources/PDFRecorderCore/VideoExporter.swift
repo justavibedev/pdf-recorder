@@ -3,13 +3,21 @@ import Foundation
 import PDFKit
 import AppKit
 
-public struct ExportItem {
+public struct ExportItem: Sendable {
     public var page: Int
     public var take: Take
     public var events: [TimedEvent]
     public var audioURL: URL
+    public var eventsURL: URL?
     public init(page: Int, take: Take, events: [TimedEvent], audioURL: URL) {
         self.page = page; self.take = take; self.events = events; self.audioURL = audioURL
+    }
+    public init(page: Int, take: Take, eventsURL: URL, audioURL: URL) {
+        self.page = page; self.take = take; self.events = []; self.eventsURL = eventsURL; self.audioURL = audioURL
+    }
+    public func loadEvents() throws -> [TimedEvent] {
+        if let eventsURL { return try EventLogReader.readAll(url: eventsURL) }
+        return events
     }
 }
 
@@ -21,9 +29,13 @@ public enum VideoExporter {
     }
     /// Work is isolated on the caller's background task. At most one page bitmap and one video frame are retained.
     public static func export(pdfURL: URL, password: String?, items: [ExportItem], to destination: URL,
-                              width: Int = 1920, height: Int = 1080,
+                              width: Int? = nil, height: Int? = nil, options: ExportOptions = ExportOptions(),
                               progress: @escaping @Sendable (Double) -> Void) async throws {
-        guard !items.isEmpty else { throw RecorderError.message("Record at least one page before exporting.") }
+        guard !items.isEmpty, items.allSatisfy({ $0.take.playbackDuration > 0 }) else { throw RecorderError.message("Select at least one take with a nonempty trim range before exporting.") }
+        let width = width ?? options.preset.width, height = height ?? options.preset.height
+        guard width > 0, height > 0, items.allSatisfy({ $0.take.duration.isFinite && $0.take.playbackDuration * 30 < Double(Int.max) }) else {
+            throw RecorderError.message("The export dimensions or a take's duration are invalid.")
+        }
         guard let pdf = PDFDocument(url: pdfURL) else { throw RecorderError.message("The source PDF could not be opened.") }
         if pdf.isLocked { guard pdf.unlock(withPassword: password ?? "") else { throw RecorderError.message("Unlock the PDF before exporting.") } }
         let temporary = FileManager.default.temporaryDirectory.appendingPathComponent(UUID().uuidString, isDirectory: true)
@@ -33,7 +45,7 @@ public enum VideoExporter {
         let writer = try AVAssetWriter(outputURL: silentURL, fileType: .mov)
         let input = AVAssetWriterInput(mediaType: .video, outputSettings: [
             AVVideoCodecKey: AVVideoCodecType.h264, AVVideoWidthKey: width, AVVideoHeightKey: height,
-            AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: 6_000_000, AVVideoMaxKeyFrameIntervalKey: 60]
+            AVVideoCompressionPropertiesKey: [AVVideoAverageBitRateKey: options.preset.videoBitRate, AVVideoMaxKeyFrameIntervalKey: 60]
         ])
         input.expectsMediaDataInRealTime = false
         let adaptor = AVAssetWriterInputPixelBufferAdaptor(assetWriterInput: input, sourcePixelBufferAttributes: [
@@ -46,7 +58,7 @@ public enum VideoExporter {
         writer.add(input)
         guard writer.startWriting() else { throw writer.error ?? RecorderError.message("Could not start video export.") }
         writer.startSession(atSourceTime: .zero)
-        let totalFrames = items.reduce(0) { $0 + Int(ceil($1.take.duration * 30)) }
+        let totalFrames = items.reduce(0) { $0 + Int(ceil($1.take.playbackDuration * 30)) }
         var frameIndex = 0
         var segments: [(ExportItem, CMTime, CMTime)] = []
         do {
@@ -54,8 +66,8 @@ public enum VideoExporter {
                 try Task.checkCancellation()
                 guard let page = pdf.page(at: item.page) else { throw RecorderError.message("A recorded PDF page is missing.") }
                 let artwork = try PageArtwork(page: page)
-                var timeline = Timeline(events: item.events, initialViewport: item.take.initialViewport)
-                let count = Int(ceil(item.take.duration * 30))
+                let timeline = try ExportTimeline(item: item)
+                let count = Int(ceil(item.take.playbackDuration * 30))
                 segments.append((item, CMTime(value: Int64(frameIndex), timescale: 30), CMTime(value: Int64(count), timescale: 30)))
                 for localFrame in 0..<count {
                     try Task.checkCancellation()
@@ -63,7 +75,7 @@ public enum VideoExporter {
                         if writer.status == .failed { throw writer.error ?? RecorderError.message("Video encoding failed.") }
                         try await Task.sleep(nanoseconds: 2_000_000)
                     }
-                    let scene = timeline.seek(to: Double(localFrame) / 30)
+                    let scene = try timeline.seek(to: item.take.playbackStart + Double(localFrame) / 30)
                     try autoreleasepool {
                         var buffer: CVPixelBuffer?
                         guard let pool = adaptor.pixelBufferPool,
@@ -94,29 +106,55 @@ public enum VideoExporter {
         try Task.checkCancellation()
         let composition = AVMutableComposition()
         let videoAsset = AVURLAsset(url: silentURL)
+        let audioComposition = AVMutableComposition()
         guard let videoTrack = composition.addMutableTrack(withMediaType: .video, preferredTrackID: kCMPersistentTrackID_Invalid),
-              let audioTrack = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid),
+              let audioTrack = audioComposition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid),
               let sourceTrack = try await videoAsset.loadTracks(withMediaType: .video).first else {
             throw RecorderError.message("Could not assemble the presentation.")
         }
         try videoTrack.insertTimeRange(CMTimeRange(start: .zero, duration: CMTime(value: Int64(frameIndex), timescale: 30)), of: sourceTrack, at: .zero)
         for (item, start, duration) in segments {
             try Task.checkCancellation()
-            let asset = AVURLAsset(url: item.audioURL)
+            let processed = temporary.appendingPathComponent("\(UUID().uuidString).caf")
+            try await AudioProcessing.renderPlayback(take: item.take, source: item.audioURL, to: processed,
+                                                     matchLoudness: options.matchLoudness, fadeSeconds: options.boundaryFadeSeconds)
+            let asset = AVURLAsset(url: processed)
             guard let track = try await asset.loadTracks(withMediaType: .audio).first else { throw RecorderError.message("A take's audio is missing.") }
             let available = try await asset.load(.duration)
             let length = CMTimeMinimum(duration, available)
             try audioTrack.insertTimeRange(CMTimeRange(start: .zero, duration: length), of: track, at: start)
         }
-        guard let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPreset1920x1080) else {
+        // Encode audio separately, then mux with passthrough so the chosen H.264 bitrate and dimensions survive.
+        let encodedAudioURL = temporary.appendingPathComponent("audio.m4a")
+        guard let audioSession = AVAssetExportSession(asset: audioComposition, presetName: AVAssetExportPresetAppleM4A) else {
+            throw RecorderError.message("AAC audio export is unavailable on this Mac.")
+        }
+        audioSession.outputURL = encodedAudioURL; audioSession.outputFileType = .m4a
+        try await run(audioSession) { progress(0.8 + $0 * 0.1) }
+        let encodedAudio = AVURLAsset(url: encodedAudioURL)
+        guard let encodedTrack = try await encodedAudio.loadTracks(withMediaType: .audio).first,
+              let finalAudio = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
+            throw RecorderError.message("The encoded presentation audio could not be read.")
+        }
+        let audioDuration = CMTimeMinimum(try await encodedAudio.load(.duration), CMTime(value: Int64(frameIndex), timescale: 30))
+        try finalAudio.insertTimeRange(CMTimeRange(start: .zero, duration: audioDuration), of: encodedTrack, at: .zero)
+        guard let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
             throw RecorderError.message("MP4 export is unavailable on this Mac.")
         }
         let staged = destination.deletingLastPathComponent().appendingPathComponent(".pdfrecorder-\(UUID().uuidString).mp4")
         defer { try? FileManager.default.removeItem(at: staged) }
         session.outputURL = staged; session.outputFileType = .mp4; session.shouldOptimizeForNetworkUse = true
+        try await run(session) { progress(0.9 + $0 * 0.1) }
+        if FileManager.default.fileExists(atPath: destination.path) {
+            _ = try FileManager.default.replaceItemAt(destination, withItemAt: staged)
+        } else { try FileManager.default.moveItem(at: staged, to: destination) }
+        progress(1)
+    }
+    private static func run(_ session: AVAssetExportSession, progress: @escaping @Sendable (Double) -> Void) async throws {
+        try Task.checkCancellation()
         let reporter = Task {
             while !Task.isCancelled {
-                progress(0.8 + Double(session.progress) * 0.2)
+                progress(Double(session.progress))
                 try? await Task.sleep(nanoseconds: 200_000_000)
             }
         }
@@ -125,9 +163,5 @@ public enum VideoExporter {
         await withTaskCancellationHandler(operation: { await session.export() }, onCancel: { cancellation.cancel() })
         try Task.checkCancellation()
         guard session.status == .completed else { throw RecorderError.message("Assembling MP4 failed: \(session.error?.localizedDescription ?? "Unknown export error")") }
-        if FileManager.default.fileExists(atPath: destination.path) {
-            _ = try FileManager.default.replaceItemAt(destination, withItemAt: staged)
-        } else { try FileManager.default.moveItem(at: staged, to: destination) }
-        progress(1)
     }
 }

@@ -90,7 +90,7 @@ private struct FolderFlap: Shape {
                 ForEach(visible, id: \.self) { index in
                     let item = items[index]
                     let active = item.page == model.pageIndex
-                    let progress = active ? min(1, max(0, model.time / item.take.duration)) : 0
+                    let progress = active && model.selectedTakeID == item.take.id ? min(1, max(0, (model.time - item.take.playbackStart) / max(0.001, item.take.playbackDuration))) : 0
                     Button { model.navigate(to: item.page); model.seek(to: 0) } label: {
                         Capsule().fill(Color.primary.opacity(0.13))
                             .overlay(alignment: .leading) {
@@ -99,7 +99,7 @@ private struct FolderFlap: Shape {
                             .frame(width: active ? 46 : 6, height: 6)
                             .frame(height: 32)
                             .contentShape(Rectangle())
-                    }.buttonStyle(.plain).help("Page \(item.page + 1) · \(duration(item.take.duration))")
+                    }.buttonStyle(.plain).help("Page \(item.page + 1) · \(duration(item.take.playbackDuration))")
                         .accessibilityLabel("Preview page \(item.page + 1)")
                 }
             }
