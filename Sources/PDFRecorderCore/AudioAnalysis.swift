@@ -33,8 +33,8 @@ public enum AudioAnalysis {
         guard trimStart.isFinite, trimEnd.isFinite, trimStart >= 0, trimEnd >= trimStart else {
             throw RecorderError.message("The audio trim range is invalid.")
         }
-        let start = AVAudioFramePosition(min(Double(file.length), trimStart * rate))
-        let end = AVAudioFramePosition(min(Double(file.length), trimEnd * rate))
+        let start = AVAudioFramePosition(min(Double(file.length), (trimStart * rate).rounded()))
+        let end = AVAudioFramePosition(min(Double(file.length), (trimEnd * rate).rounded()))
         let count = end - start
         guard count > 0, let buffer = AVAudioPCMBuffer(pcmFormat: file.processingFormat, frameCapacity: 8192) else {
             throw RecorderError.message("The audio has no readable samples.")
@@ -104,8 +104,8 @@ public enum AudioProcessing {
         let multiplier = gain(take: take, analysis: analysis, matchLoudness: matchLoudness)
         let input = try AVAudioFile(forReading: source, commonFormat: .pcmFormatFloat32, interleaved: false)
         let format = input.processingFormat
-        let start = AVAudioFramePosition(min(Double(input.length), take.playbackStart * format.sampleRate))
-        let end = AVAudioFramePosition(min(Double(input.length), take.playbackEnd * format.sampleRate))
+        let start = AVAudioFramePosition(min(Double(input.length), (take.playbackStart * format.sampleRate).rounded()))
+        let end = AVAudioFramePosition(min(Double(input.length), (take.playbackEnd * format.sampleRate).rounded()))
         let count = end - start
         guard count > 0, let buffer = AVAudioPCMBuffer(pcmFormat: format, frameCapacity: 8192) else {
             throw RecorderError.message("The trimmed take has no readable audio.")

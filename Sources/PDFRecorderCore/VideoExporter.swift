@@ -137,7 +137,10 @@ public enum VideoExporter {
               let finalAudio = composition.addMutableTrack(withMediaType: .audio, preferredTrackID: kCMPersistentTrackID_Invalid) else {
             throw RecorderError.message("The encoded presentation audio could not be read.")
         }
-        let audioDuration = CMTimeMinimum(try await encodedAudio.load(.duration), CMTime(value: Int64(frameIndex), timescale: 30))
+        // AppleM4A preserves the PCM count in gapless metadata. On macOS 14 its
+        // AVURLAsset duration can nevertheless be shorter by AAC encoder priming.
+        // Use the source composition's known presentation length, never that estimate.
+        let audioDuration = CMTimeMinimum(audioComposition.duration, CMTime(value: Int64(frameIndex), timescale: 30))
         try finalAudio.insertTimeRange(CMTimeRange(start: .zero, duration: audioDuration), of: encodedTrack, at: .zero)
         guard let session = AVAssetExportSession(asset: composition, presetName: AVAssetExportPresetPassthrough) else {
             throw RecorderError.message("MP4 export is unavailable on this Mac.")

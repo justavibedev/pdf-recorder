@@ -138,6 +138,13 @@ final class MediaFeatureTests: XCTestCase {
         let audio = try await asset.loadTracks(withMediaType: .audio)
         let descriptions = try await audio[0].load(.formatDescriptions)
         XCTAssertEqual(CMFormatDescriptionGetMediaSubType(descriptions[0]), kAudioFormatMPEG4AAC)
+        let trackRange = try await audio[0].load(.timeRange)
+        let mp4TimingError = min(abs(trackRange.duration.seconds - take.playbackDuration),
+                                 abs(trackRange.duration.seconds + 2112 / 48_000 - take.playbackDuration))
+        XCTAssertLessThan(mp4TimingError, 1 / 48_000, "Track timing must match either presentation or AAC-priming representation")
+        let decoded = try readPresentationAudio(asset: asset, track: audio[0], duration: take.playbackDuration)
+        XCTAssertEqual(decoded.frames, 14_400, "AAC packet padding outside the video presentation does not count as trimmed speech")
+        XCTAssertGreaterThan(decoded.tailRMS, 0.01, "The final 30–15 ms of speech must survive muxing; silence padding cannot replace it")
     }
 
     func testAudioExportHonorsTrimAndCancellationPreservesSource() async throws {
@@ -146,13 +153,22 @@ final class MediaFeatureTests: XCTestCase {
         try writeAudio(at: input, duration: 0.8)
         var take = Take(duration: 0.8); take.trimStart = 0.2; take.trimEnd = 0.5
         try await AudioExporter.export(items: [.init(page: 0, take: take, events: [], audioURL: input)], to: output) { _ in }
-        let duration = try await AVURLAsset(url: output, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true]).load(.duration)
-        XCTAssertEqual(duration.seconds, 0.3, accuracy: 0.03)
+        let exportedAsset = AVURLAsset(url: output, options: [AVURLAssetPreferPreciseDurationAndTimingKey: true])
+        let duration = try await exportedAsset.load(.duration)
         // Check the decoded PCM rather than relying only on container duration estimates:
         // AAC priming/remainder packets must not remove any part of the 0.3-second trim.
         let decoded = try AVAudioFile(forReading: output)
         let expectedFrames = Int64((take.playbackDuration * decoded.processingFormat.sampleRate).rounded())
         XCTAssertEqual(decoded.length, expectedFrames)
+        // Some macOS 14 M4A readers report a duration excluding 2,112 AAC priming frames
+        // even though iTunes gapless metadata and the decoded samples preserve the full trim.
+        // Accept exactly either representation; decoded sample count remains the correctness gate.
+        let primingDuration = 2112 / decoded.processingFormat.sampleRate
+        let timingError = min(abs(duration.seconds - take.playbackDuration), abs(duration.seconds + primingDuration - take.playbackDuration))
+        XCTAssertLessThan(timingError, 1 / decoded.processingFormat.sampleRate)
+        let exportedTrack = try await exportedAsset.loadTracks(withMediaType: .audio).first!
+        let trackRange = try await exportedTrack.load(.timeRange)
+        print("AAC trim diagnostic: asset=\(duration.seconds), trackStart=\(trackRange.start.seconds), trackDuration=\(trackRange.duration.seconds), decodedFrames=\(decoded.length), rate=\(decoded.processingFormat.sampleRate)")
         let buffer = AVAudioPCMBuffer(pcmFormat: decoded.processingFormat, frameCapacity: 8192)!
         var decodedFrames: Int64 = 0
         while decoded.framePosition < decoded.length {
@@ -199,5 +215,45 @@ final class MediaFeatureTests: XCTestCase {
         buffer.frameLength = buffer.frameCapacity
         for frame in 0..<Int(buffer.frameLength) { buffer.floatChannelData![0][frame] = value(frame) }
         try file.write(from: buffer)
+    }
+
+    /// Decode the audio timeline a video player presents. Raw AVAudioFile reads of an MP4
+    /// can expose trailing AAC packet remainder samples beyond the movie's edit range.
+    private func readPresentationAudio(asset: AVAsset, track: AVAssetTrack, duration: Double) throws -> (frames: Int64, tailRMS: Double) {
+        let reader = try AVAssetReader(asset: asset)
+        let output = AVAssetReaderTrackOutput(track: track, outputSettings: [
+            AVFormatIDKey: kAudioFormatLinearPCM, AVLinearPCMBitDepthKey: 32,
+            AVLinearPCMIsFloatKey: true, AVLinearPCMIsNonInterleaved: false
+        ])
+        reader.add(output)
+        reader.timeRange = CMTimeRange(start: .zero, duration: CMTime(value: Int64((duration * 48_000).rounded()), timescale: 48_000))
+        guard reader.startReading() else { throw reader.error ?? RecorderError.message("Could not decode the exported test audio") }
+        var frames: Int64 = 0, tailFrames = 0
+        var tailSquares = 0.0
+        while let sample = output.copyNextSampleBuffer() {
+            guard let description = CMSampleBufferGetFormatDescription(sample),
+                  let format = CMAudioFormatDescriptionGetStreamBasicDescription(description),
+                  let block = CMSampleBufferGetDataBuffer(sample) else { throw RecorderError.message("Missing decoded audio samples") }
+            let rate = format.pointee.mSampleRate, channels = Int(format.pointee.mChannelsPerFrame)
+            let first = CMTimeConvertScale(CMSampleBufferGetPresentationTimeStamp(sample), timescale: Int32(rate), method: .default).value
+            let expected = Int64((duration * rate).rounded())
+            var bytes = Data(count: CMBlockBufferGetDataLength(block))
+            let status = bytes.withUnsafeMutableBytes { buffer in CMBlockBufferCopyDataBytes(block, atOffset: 0, dataLength: buffer.count, destination: buffer.baseAddress!) }
+            guard status == kCMBlockBufferNoErr else { throw RecorderError.message("Could not read decoded audio samples") }
+            bytes.withUnsafeBytes { buffer in
+                let values = buffer.bindMemory(to: Float.self)
+                for frame in 0..<CMSampleBufferGetNumSamples(sample) {
+                    let position = first + Int64(frame)
+                    guard position >= 0, position < expected else { continue }
+                    frames += 1
+                    let time = Double(position) / rate
+                    if time >= duration - 0.030 && time < duration - 0.015 {
+                        let value = Double(values[frame * channels]); tailSquares += value * value; tailFrames += 1
+                    }
+                }
+            }
+        }
+        guard reader.status == .completed else { throw reader.error ?? RecorderError.message("Decoding the exported test audio failed") }
+        return (frames, sqrt(tailSquares / Double(max(1, tailFrames))))
     }
 }

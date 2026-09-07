@@ -37,6 +37,13 @@ Coverage includes:
 macOS media services must be available; a restricted process sandbox may block
 the encoder. Do not silently skip the export tests when this happens.
 
+The short AAC trim regression checks the exact decoded PCM sample count.
+On macOS 14, an M4A duration read can differ by the 2,112 encoder-priming samples
+while the decoded audio retains the full trim. The test accepts either duration
+representation within one sample, rather than loosening sample-count accuracy.
+MP4 assembly uses the known PCM presentation length. See Apple's
+[AAC priming explanation](https://developer.apple.com/documentation/quicktime-file-format/background_aac_encoding).
+
 To retain synthetic test artifacts for inspection:
 
 ```sh

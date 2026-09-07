@@ -129,7 +129,7 @@ public actor PlaybackAudioCache {
         let attributes = try resolved.resourceValues(forKeys: [.fileSizeKey, .contentModificationDateKey, .isRegularFileKey])
         guard attributes.isRegularFile == true else { throw RecorderError.message("The source audio is not a readable file.") }
         // Explicit algorithm revision prevents reuse after processing behavior changes.
-        let identity = ["playback-pcm-v1", resolved.path, String(attributes.fileSize ?? 0),
+        let identity = ["playback-pcm-v2", resolved.path, String(attributes.fileSize ?? 0),
                         String((attributes.contentModificationDate ?? .distantPast).timeIntervalSinceReferenceDate.bitPattern),
                         String(take.playbackStart.bitPattern), String(take.playbackEnd.bitPattern),
                         String((take.gainDB ?? 0).bitPattern), matchLoudness ? "matched" : "original", "fade=0.01"]
