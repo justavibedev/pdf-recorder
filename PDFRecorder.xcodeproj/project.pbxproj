@@ -1,0 +1,470 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		03FBB32375EC447F1A9BBE89 /* VideoExporter.swift in Sources */ = {isa = PBXBuildFile; fileRef = DE35BDCAD7A332A93E712CE2 /* VideoExporter.swift */; };
+		29DAFC7A9A0085CE06F875B0 /* Models.swift in Sources */ = {isa = PBXBuildFile; fileRef = 99E665FF99543FF9E7E241BD /* Models.swift */; };
+		2F60CA1EDE6D3DB03CA04AF6 /* ProjectStore.swift in Sources */ = {isa = PBXBuildFile; fileRef = D4806B2338C0803B2990FD3A /* ProjectStore.swift */; };
+		3042631A10BE98E5E5C525AD /* MicrophoneRecorder.swift in Sources */ = {isa = PBXBuildFile; fileRef = 816305D049F58B4EF9097870 /* MicrophoneRecorder.swift */; };
+		5605486737CF10426AB4A7E5 /* PDFRecorderCore.framework in Frameworks */ = {isa = PBXBuildFile; fileRef = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */; };
+		61459CE168DD1C0B3C1682FF /* PDFCanvas.swift in Sources */ = {isa = PBXBuildFile; fileRef = E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */; };
+		79565C3FF529B9C84509107F /* ContentView.swift in Sources */ = {isa = PBXBuildFile; fileRef = 95E3B6F9B700648D8461C9CE /* ContentView.swift */; };
+		7AE0B7DC6B1264AE758D3CFF /* PDFRecorderCore.framework in Embed Frameworks */ = {isa = PBXBuildFile; fileRef = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */; settings = {ATTRIBUTES = (CodeSignOnCopy, RemoveHeadersOnCopy, ); }; };
+		9D9204C596A7D8619CF9F09F /* SceneRenderer.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */; };
+		DBB031F1CC5AE0B885BDCBDB /* AppModel.swift in Sources */ = {isa = PBXBuildFile; fileRef = 796DAC5FEBC44BF536768740 /* AppModel.swift */; };
+		EF69E8362212D7D12AB22401 /* PDFRecorderApp.swift in Sources */ = {isa = PBXBuildFile; fileRef = 0528E446E88A316E693B0863 /* PDFRecorderApp.swift */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		5E3FA0877EB678CF17BF94DD /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = FA858A1D1B200420EF9A0579 /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = D3CC970F9812A21E5361297C;
+			remoteInfo = PDFRecorderCore;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXCopyFilesBuildPhase section */
+		A3C669D18F961F37E9AB114D /* Embed Frameworks */ = {
+			isa = PBXCopyFilesBuildPhase;
+			buildActionMask = 2147483647;
+			dstPath = "";
+			dstSubfolderSpec = 10;
+			files = (
+				7AE0B7DC6B1264AE758D3CFF /* PDFRecorderCore.framework in Embed Frameworks */,
+			);
+			name = "Embed Frameworks";
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXCopyFilesBuildPhase section */
+
+/* Begin PBXFileReference section */
+		0528E446E88A316E693B0863 /* PDFRecorderApp.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFRecorderApp.swift; sourceTree = "<group>"; };
+		6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = SceneRenderer.swift; sourceTree = "<group>"; };
+		78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */ = {isa = PBXFileReference; explicitFileType = wrapper.framework; includeInIndex = 0; path = PDFRecorderCore.framework; sourceTree = BUILT_PRODUCTS_DIR; };
+		796DAC5FEBC44BF536768740 /* AppModel.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppModel.swift; sourceTree = "<group>"; };
+		816305D049F58B4EF9097870 /* MicrophoneRecorder.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = MicrophoneRecorder.swift; sourceTree = "<group>"; };
+		95E3B6F9B700648D8461C9CE /* ContentView.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ContentView.swift; sourceTree = "<group>"; };
+		99E665FF99543FF9E7E241BD /* Models.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Models.swift; sourceTree = "<group>"; };
+		B6C87D9FBEA63C079FC1E3C1 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist; path = Info.plist; sourceTree = "<group>"; };
+		C1912FFCCF73916343D6B947 /* PDFRecorder.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = PDFRecorder.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		D4806B2338C0803B2990FD3A /* ProjectStore.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = ProjectStore.swift; sourceTree = "<group>"; };
+		DA24B2B859DA078ACD183984 /* PDFRecorder.entitlements */ = {isa = PBXFileReference; lastKnownFileType = text.plist.entitlements; path = PDFRecorder.entitlements; sourceTree = "<group>"; };
+		DE35BDCAD7A332A93E712CE2 /* VideoExporter.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VideoExporter.swift; sourceTree = "<group>"; };
+		E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = PDFCanvas.swift; sourceTree = "<group>"; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		50FC6ABABE13F01873008908 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				5605486737CF10426AB4A7E5 /* PDFRecorderCore.framework in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		608CEC2F416923CDDE7D916D /* PDFRecorderCore */ = {
+			isa = PBXGroup;
+			children = (
+				99E665FF99543FF9E7E241BD /* Models.swift */,
+				D4806B2338C0803B2990FD3A /* ProjectStore.swift */,
+				6BB56AA71A97DF1856E208AB /* SceneRenderer.swift */,
+				DE35BDCAD7A332A93E712CE2 /* VideoExporter.swift */,
+			);
+			name = PDFRecorderCore;
+			path = Sources/PDFRecorderCore;
+			sourceTree = "<group>";
+		};
+		66BB4CF4A418D367CADE3B00 = {
+			isa = PBXGroup;
+			children = (
+				BFD8C89EEE7685939BE484E5 /* PDFRecorderApp */,
+				608CEC2F416923CDDE7D916D /* PDFRecorderCore */,
+				830239BBD6C5B4D6FF4B6EF1 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		830239BBD6C5B4D6FF4B6EF1 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				C1912FFCCF73916343D6B947 /* PDFRecorder.app */,
+				78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		BFD8C89EEE7685939BE484E5 /* PDFRecorderApp */ = {
+			isa = PBXGroup;
+			children = (
+				796DAC5FEBC44BF536768740 /* AppModel.swift */,
+				95E3B6F9B700648D8461C9CE /* ContentView.swift */,
+				B6C87D9FBEA63C079FC1E3C1 /* Info.plist */,
+				816305D049F58B4EF9097870 /* MicrophoneRecorder.swift */,
+				E83F95F4C6954402C1A07EEA /* PDFCanvas.swift */,
+				DA24B2B859DA078ACD183984 /* PDFRecorder.entitlements */,
+				0528E446E88A316E693B0863 /* PDFRecorderApp.swift */,
+			);
+			name = PDFRecorderApp;
+			path = Sources/PDFRecorderApp;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		6283F2A7F43E7ACCBE6C92A3 /* PDFRecorder */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 0CDCB8FE0985F4FD95163522 /* Build configuration list for PBXNativeTarget "PDFRecorder" */;
+			buildPhases = (
+				55440497446DD726B4B73D39 /* Sources */,
+				50FC6ABABE13F01873008908 /* Frameworks */,
+				A3C669D18F961F37E9AB114D /* Embed Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				D582A764B4E3E471588B73B3 /* PBXTargetDependency */,
+			);
+			name = PDFRecorder;
+			packageProductDependencies = (
+			);
+			productName = PDFRecorder;
+			productReference = C1912FFCCF73916343D6B947 /* PDFRecorder.app */;
+			productType = "com.apple.product-type.application";
+		};
+		D3CC970F9812A21E5361297C /* PDFRecorderCore */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 8F97209A8CC547BCFDDA78CC /* Build configuration list for PBXNativeTarget "PDFRecorderCore" */;
+			buildPhases = (
+				0D88B07FD990FC42FDB460D7 /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = PDFRecorderCore;
+			packageProductDependencies = (
+			);
+			productName = PDFRecorderCore;
+			productReference = 78F2E010F9C4FEAD85095D6B /* PDFRecorderCore.framework */;
+			productType = "com.apple.product-type.framework";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		FA858A1D1B200420EF9A0579 /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1430;
+				TargetAttributes = {
+					6283F2A7F43E7ACCBE6C92A3 = {
+						ProvisioningStyle = Manual;
+					};
+					D3CC970F9812A21E5361297C = {
+						ProvisioningStyle = Manual;
+					};
+				};
+			};
+			buildConfigurationList = B7D940F533F5B1CC4C11474B /* Build configuration list for PBXProject "PDFRecorder" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 66BB4CF4A418D367CADE3B00;
+			minimizedProjectReferenceProxies = 1;
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 830239BBD6C5B4D6FF4B6EF1 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				D3CC970F9812A21E5361297C /* PDFRecorderCore */,
+				6283F2A7F43E7ACCBE6C92A3 /* PDFRecorder */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0D88B07FD990FC42FDB460D7 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				29DAFC7A9A0085CE06F875B0 /* Models.swift in Sources */,
+				2F60CA1EDE6D3DB03CA04AF6 /* ProjectStore.swift in Sources */,
+				9D9204C596A7D8619CF9F09F /* SceneRenderer.swift in Sources */,
+				03FBB32375EC447F1A9BBE89 /* VideoExporter.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		55440497446DD726B4B73D39 /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				DBB031F1CC5AE0B885BDCBDB /* AppModel.swift in Sources */,
+				79565C3FF529B9C84509107F /* ContentView.swift in Sources */,
+				3042631A10BE98E5E5C525AD /* MicrophoneRecorder.swift in Sources */,
+				61459CE168DD1C0B3C1682FF /* PDFCanvas.swift in Sources */,
+				EF69E8362212D7D12AB22401 /* PDFRecorderApp.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		D582A764B4E3E471588B73B3 /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = D3CC970F9812A21E5361297C /* PDFRecorderCore */;
+			targetProxy = 5E3FA0877EB678CF17BF94DD /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		1EC15DEECE78D65F6AB165BB /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/PDFRecorderApp/PDFRecorder.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = Sources/PDFRecorderApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.pdfrecorder.app;
+				PRODUCT_NAME = "PDF Recorder";
+				SDKROOT = macosx;
+			};
+			name = Release;
+		};
+		3BC75F8213B5838D8AB68AF6 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Debug;
+		};
+		4C014E4CD5F397FE5A7C820E /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/PDFRecorderApp/PDFRecorder.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				INFOPLIST_FILE = Sources/PDFRecorderApp/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.pdfrecorder.app;
+				PRODUCT_NAME = "PDF Recorder";
+				SDKROOT = macosx;
+			};
+			name = Debug;
+		};
+		563251CA1E602F8F486E4E8A /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				CODE_SIGN_IDENTITY = "-";
+				CODE_SIGN_STYLE = Manual;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_HARDENED_RUNTIME = YES;
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 5.0;
+			};
+			name = Release;
+		};
+		A394F40C78F94C3937823C3C /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.pdfrecorder.core;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Debug;
+		};
+		FD88AFC11D5066B10222AFF8 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				CODE_SIGN_IDENTITY = "";
+				COMBINE_HIDPI_IMAGES = YES;
+				CURRENT_PROJECT_VERSION = 1;
+				DEFINES_MODULE = YES;
+				DYLIB_COMPATIBILITY_VERSION = 1;
+				DYLIB_CURRENT_VERSION = 1;
+				DYLIB_INSTALL_NAME_BASE = "@rpath";
+				GENERATE_INFOPLIST_FILE = YES;
+				INSTALL_PATH = "$(LOCAL_LIBRARY_DIR)/Frameworks";
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = org.pdfrecorder.core;
+				SDKROOT = macosx;
+				SKIP_INSTALL = YES;
+				VERSIONING_SYSTEM = "apple-generic";
+			};
+			name = Release;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		0CDCB8FE0985F4FD95163522 /* Build configuration list for PBXNativeTarget "PDFRecorder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				4C014E4CD5F397FE5A7C820E /* Debug */,
+				1EC15DEECE78D65F6AB165BB /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		8F97209A8CC547BCFDDA78CC /* Build configuration list for PBXNativeTarget "PDFRecorderCore" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A394F40C78F94C3937823C3C /* Debug */,
+				FD88AFC11D5066B10222AFF8 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		B7D940F533F5B1CC4C11474B /* Build configuration list for PBXProject "PDFRecorder" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				3BC75F8213B5838D8AB68AF6 /* Debug */,
+				563251CA1E602F8F486E4E8A /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+	};
+	rootObject = FA858A1D1B200420EF9A0579 /* Project object */;
+}
