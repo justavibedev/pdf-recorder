@@ -24,7 +24,7 @@ import PDFRecorderCore
                             card(take, number: index + 1)
                         }
                     }
-                    if let take = model.selectedTake {
+                    if model.advancedUI, let take = model.selectedTake {
                         Divider()
                         TakeEditorView(model: model, take: take).id(take.id)
                     }
@@ -69,6 +69,10 @@ import PDFRecorderCore
                 } label: {
                     Label(previewing && model.mode == .playing ? "Pause" : "Listen", systemImage: previewing && model.mode == .playing ? "pause.fill" : "play.fill")
                 }.disabled(model.mode != .idle && model.mode != .playing)
+                if !model.advancedUI {
+                    Button { model.deleteTake(take) } label: { Image(systemName: "trash") }
+                        .help("Move take to Trash").accessibilityLabel("Move take to Trash").disabled(model.mode != .idle)
+                }
                 Spacer(minLength: 0)
                 if exporting {
                     Label(model.page?.includedInExport == false ? "Chosen · excluded" : "Export take", systemImage: "checkmark.circle.fill")
@@ -82,7 +86,7 @@ import PDFRecorderCore
             .overlay(RoundedRectangle(cornerRadius: 7).strokeBorder(previewing ? Color.white.opacity(0.3) : StudioTheme.border))
             .contextMenu {
                 Button("Use in Export") { model.useTake(take) }.disabled(model.mode != .idle)
-                Button("Compare with Current Take") { model.comparisonTakeID = take.id }.disabled(previewing)
+                if model.advancedUI { Button("Compare with Current Take") { model.comparisonTakeID = take.id }.disabled(previewing) }
                 Divider()
                 Button("Move to Trash", role: .destructive) { model.deleteTake(take) }.disabled(model.mode != .idle)
             }

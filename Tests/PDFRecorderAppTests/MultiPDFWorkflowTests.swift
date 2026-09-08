@@ -7,6 +7,45 @@ import PDFRecorderCore
 
 /// Multiple source PDFs, controller state and portable storage, with no application or audio device started.
 final class MultiPDFWorkflowTests: XCTestCase {
+    @MainActor func testInterfaceModeMigratesOldPreferencesAndPersistsChoice() throws {
+        let fixture = try MultiPDFFixture(); defer { fixture.remove() }
+        var legacy = RecorderPreferences()
+        legacy.microphoneID = "saved-device"; legacy.countdown = 5; legacy.notesFontSize = 23
+        try WorkspaceStore.savePreferences(legacy, at: fixture.support)
+        let model = AppModel(storageRoot: fixture.support, connectDevices: false)
+        XCTAssertFalse(model.advancedUI)
+        XCTAssertEqual(model.inputID, "saved-device"); XCTAssertEqual(model.countdownSeconds, 5)
+        XCTAssertEqual(model.notesFontSize, 23)
+        model.advancedUI = true
+        let reopened = AppModel(storageRoot: fixture.support, connectDevices: false)
+        XCTAssertTrue(reopened.advancedUI)
+        XCTAssertEqual(reopened.inputID, "saved-device")
+        reopened.advancedUI = false
+        XCTAssertEqual(try WorkspaceStore.loadPreferences(at: fixture.support).advancedUI, false)
+    }
+
+    @MainActor func testInterfaceSwitchPreservesTakesNotesAndExportConfiguration() async throws {
+        let fixture = try MultiPDFFixture(); defer { fixture.remove() }
+        let model = AppModel(storageRoot: fixture.support, connectDevices: false)
+        model.openURLs(fixture.sources)
+        defer { model.reviewTask?.cancel(); model.searchTask?.cancel(); model.metadataSaveTask?.cancel() }
+        let take = try addTake(to: model, page: 0, name: "Keep this take")
+        model.useTake(take)
+        model.updatePage { $0.notes = "My explanation" }
+        XCTAssertTrue(model.flushMetadata())
+        model.exportScope = .document; model.exportKind = .audio; model.exportSeparately = true
+        model.scene.viewport = Viewport(zoom: 2)
+        let before = try XCTUnwrap(model.manifest)
+        let selected = try model.exportSelection().map { $0.take.id }
+        model.advancedUI = true; model.advancedUI = false
+        XCTAssertEqual(model.manifest, before)
+        XCTAssertEqual(try ProjectStore.load(at: XCTUnwrap(model.projectURL)), before)
+        XCTAssertEqual(try model.exportSelection().map { $0.take.id }, selected)
+        XCTAssertEqual(model.exportKind, .audio); XCTAssertTrue(model.exportSeparately)
+        XCTAssertEqual(model.scene.viewport.zoom, 2)
+        XCTAssertNil(model.player); XCTAssertEqual(model.microphone.snapshot.time, 0)
+    }
+
     @MainActor func testOpenThreePDFsKeepsDocumentBoundariesAndMixedGeometry() async throws {
         let fixture = try MultiPDFFixture(); defer { fixture.remove() }
         let model = AppModel(storageRoot: fixture.support, connectDevices: false)

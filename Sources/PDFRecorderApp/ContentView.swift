@@ -34,6 +34,13 @@ private let accent = StudioTheme.text
                 }.foregroundStyle(StudioTheme.muted)
             }
             ToolbarItemGroup(placement: .primaryAction) {
+                Picker("Interface mode", selection: $model.advancedUI) {
+                    Text("Simple").tag(false)
+                    Text("Advanced").tag(true)
+                }.pickerStyle(.segmented).frame(width: 170)
+                    .disabled(model.mode != .idle)
+                    .help("Simple keeps the essentials visible. Advanced reveals editing and presenting tools.")
+                    .accessibilityLabel("Interface mode")
                 if model.manifest != nil {
                     Button { model.focusMode.toggle() } label: { Image(systemName: "sidebar.left") }.help("Show or hide page sidebar").accessibilityLabel(model.focusMode ? "Show page sidebar" : "Hide page sidebar")
                     Button { model.hideInspector.toggle() } label: { Image(systemName: "sidebar.right") }.help("Show or hide notes and takes").accessibilityLabel(model.hideInspector ? "Show notes and takes" : "Hide notes and takes")
@@ -152,7 +159,7 @@ private let accent = StudioTheme.text
                         Label(modeLabel, systemImage: model.isRecording ? "record.circle" : "doc.text")
                             .font(.caption.weight(.semibold)).foregroundStyle(model.isRecording ? Color.red : Color.secondary)
                         Spacer()
-                        PaceIndicator(model: model)
+                        if model.advancedUI { PaceIndicator(model: model) }
 
                     }
                     Spacer(minLength: 0)
@@ -195,7 +202,7 @@ private let accent = StudioTheme.text
                 Divider()
                 transport
             }.frame(minWidth: 320).background(StudioTheme.background)
-            if !model.hideInspector { takeSidebar.frame(minWidth: 232, idealWidth: 292, maxWidth: 520) }
+            if !model.hideInspector { takeSidebar.frame(minWidth: 232, idealWidth: model.advancedUI ? 292 : 240, maxWidth: model.advancedUI ? 520 : 280) }
         }
     }
     private var modeLabel: String {
@@ -220,7 +227,7 @@ private let accent = StudioTheme.text
                     Text("PAGES").font(.system(size: 10, weight: .semibold)).tracking(1)
                     Spacer()
                     Text("\(model.currentDocumentRecordedCount)/\(pageCount)").font(.system(size: 10).monospacedDigit())
-                    Menu {
+                    if model.advancedUI { Menu {
                         Picker("Filter", selection: $model.pageFilter) { ForEach(PageFilter.allCases) { Text($0.rawValue).tag($0) } }
                         Divider()
                         Button("Document Outline") { showOutline = true }
@@ -229,6 +236,7 @@ private let accent = StudioTheme.text
                         Button("Recognize Scanned Text", action: model.startOCR).disabled(model.mode != .idle || model.ocrTask != nil)
                     } label: { Image(systemName: "line.3.horizontal.decrease") }
                         .menuStyle(.borderlessButton).frame(width: 18).disabled(!model.canNavigate).help("Page filters and reading tools").accessibilityLabel("Page filters and reading tools")
+                    }
                 }.foregroundStyle(StudioTheme.muted)
                 HStack(spacing: 7) {
                     Image(systemName: "magnifyingglass").foregroundStyle(StudioTheme.faint)
@@ -296,7 +304,7 @@ private let accent = StudioTheme.text
     private var canvasToolbar: some View {
         HStack(spacing: 3) {
             ForEach(primaryTools, id: \.self) { tool in toolButton(tool) }
-            Menu {
+            if model.advancedUI || !primaryTools.contains(model.tool) { Menu {
                 ForEach(InkTool.allCases.filter { !primaryTools.contains($0) }, id: \.self) { tool in Button { model.tool = tool } label: { Label(tool.commandTitle, systemImage: toolIcon(tool)) } }
                 Divider()
                 Button("Undo Mark", action: model.undo).disabled(model.groupedUndoActions.isEmpty)
@@ -304,10 +312,16 @@ private let accent = StudioTheme.text
                 Button("Clear Marks", action: model.clearMarks).disabled(model.scene.strokes.isEmpty)
             } label: { Image(systemName: primaryTools.contains(model.tool) ? "square.on.circle" : toolIcon(model.tool)).frame(width: 24, height: 28) }
                 .menuStyle(.borderlessButton).frame(width: 27).help("More tools, undo and redo").accessibilityLabel("More annotation tools, undo and redo")
+            }
+            if !model.advancedUI {
+                Button(action: model.undo) { Image(systemName: "arrow.uturn.backward") }.buttonStyle(.plain)
+                    .disabled(model.groupedUndoActions.isEmpty).help("Undo mark").accessibilityLabel("Undo mark")
+            }
             Rectangle().fill(StudioTheme.border).frame(width: 1, height: 18).padding(.horizontal, 4)
-            Button { showInk.toggle() } label: { Image(systemName: "slider.horizontal.3").frame(width: 25, height: 28) }
+            if model.advancedUI { Button { showInk.toggle() } label: { Image(systemName: "slider.horizontal.3").frame(width: 25, height: 28) }
                 .buttonStyle(.plain).foregroundStyle(StudioTheme.muted).help("Ink options").accessibilityLabel("Ink options")
                 .popover(isPresented: $showInk) { inkOptions }
+            }
             Spacer(minLength: 2)
             Menu {
                 Button("Zoom In") { model.zoom(1.25) }
@@ -353,7 +367,7 @@ private let accent = StudioTheme.text
         VStack(spacing: 13) {
             if model.selectedTake != nil, model.mode == .idle || model.mode == .playing {
                 WaveformTimelineView(model: model)
-                HStack {
+                if model.advancedUI { HStack {
                     Button { model.skipPlayback(-10) } label: { Image(systemName: "gobackward.10") }.help("Back 10 seconds").accessibilityLabel("Back 10 seconds")
                     Button { model.skipPlayback(10) } label: { Image(systemName: "goforward.10") }.help("Forward 10 seconds").accessibilityLabel("Forward 10 seconds")
                     Spacer()
@@ -361,6 +375,7 @@ private let accent = StudioTheme.text
                         ForEach([Float(0.75), 1, 1.25, 1.5, 2], id: \.self) { speed in Text("\(speed, specifier: "%g")×").tag(speed) }
                     }.frame(width: 150)
                 }.font(.caption).buttonStyle(.borderless)
+                }
             }
             HStack(spacing: 12) {
                 if model.mode == .checkingMicrophone {
@@ -395,7 +410,7 @@ private let accent = StudioTheme.text
                         .buttonStyle(StudioButtonStyle(kind: .record)).disabled(model.mode != .idle)
                     Button { model.play(all: model.playbackPaused && model.playbackIsPresentation) } label: { Image(systemName: model.mode == .playing ? "pause.fill" : "play.fill") }.help(model.mode == .playing ? "Pause playback" : "Play take").accessibilityLabel(model.mode == .playing ? "Pause playback" : "Play take")
                         .disabled(model.selectedTake == nil || model.mode == .exporting)
-                    Button(action: model.togglePractice) { Image(systemName: "timer") }.help("Practice without recording").accessibilityLabel("Practice without recording").disabled(model.mode != .idle)
+                    if model.advancedUI { Button(action: model.togglePractice) { Image(systemName: "timer") }.help("Practice without recording").accessibilityLabel("Practice without recording").disabled(model.mode != .idle) }
                 }
             }.controlSize(model.largeControls ? .large : .regular)
             HStack {

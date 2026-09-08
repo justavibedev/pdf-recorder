@@ -26,6 +26,11 @@ import PDFRecorderCore
                 Button("Storage & Recovery…", action: model.refreshStorage).disabled(model.manifest == nil || model.mode != .idle)
             }
             CommandMenu("Workspace") {
+                Picker("Interface mode", selection: $model.advancedUI) {
+                    Text("Simple").tag(false)
+                    Text("Advanced").tag(true)
+                }.disabled(model.mode != .idle)
+                Divider()
                 Button("Search Commands…") { model.showCommands = true }.keyboardShortcut("k")
                 Button("Find in PDF and Notes") { model.focusSearchToken += 1 }.keyboardShortcut("f").disabled(model.manifest == nil)
                 Button("Show / Hide Pages") { model.focusMode.toggle() }.keyboardShortcut("1", modifiers: [.command, .option])

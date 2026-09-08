@@ -19,6 +19,20 @@ Bring your lecture PDFs together, prepare notes, and rehearse. Record your voice
 PDFs can be scanned, portrait, landscape, rotated, mixed-size, or password-protected.
 Existing PDF annotations stay visible. Every source file is copied unchanged.
 
+## Simple and Advanced modes
+
+Use the **Simple / Advanced** switch in the title bar or **Workspace → Interface
+mode**. Simple is the default: PDF navigation, basic drawing and undo, private
+notes, recording, take selection, and export. Its narrower inspector gives the
+PDF more room. Advanced reveals shapes and ink options, take editing, A/B
+comparison, volume, markers, teleprompter, and presentation tools.
+
+The choice is remembered on this Mac. Switching changes the interface only:
+existing takes, notes, trims, and export settings stay intact. Simple export
+shows the current output settings; **Export options…** reveals all settings
+without switching modes. Menu commands remain available in either mode.
+The mode switch is disabled during recording and other active operations.
+
 ## Multiple PDFs, one workspace
 
 Select several PDFs when opening, drop them together, or use **Add PDFs** in an
@@ -212,7 +226,7 @@ takes they still reference.
 
 See [validation and the live checklist](docs/VALIDATION.md),
 [project format](docs/PROJECT_FORMAT.md), and [contributing](CONTRIBUTING.md).
-The 0.4 suite contains **95 automated tests**. Synthetic media tests do not use the microphone. They verify MP4 dimensions,
+The 0.4 suite contains **97 automated tests**. Synthetic media tests do not use the microphone. They verify MP4 dimensions,
 frame rate, codec, duration, frame agreement with the renderer, and audio-only
 AAC export. Tests also cover search, bookmarks, export exclusions, countdown
 cancellation, and upgrading single-PDF projects from formats v1/v2/v3 to v4.

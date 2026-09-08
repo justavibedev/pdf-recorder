@@ -115,19 +115,23 @@ synthetic clock test.
 
 ## Evidence ledger
 
-The 0.4.0 development preview passes **95 automated tests** and a universal
+The 0.4.0 development preview passes **97 automated tests** and a universal
 Release build locally on Apple Silicon with Xcode 26.6. This includes nine
-dedicated multi-PDF core tests, six headless multi-PDF workflow tests, and four
+dedicated multi-PDF core tests, eight headless multi-PDF workflow tests, and four
 Save As/OCR lifecycle tests.
 Both `arm64` and `x86_64` slices are present; strict deep signature verification
-passes. The ad-hoc signed app occupies approximately **14 MB** on disk and its
+passes. The ad-hoc signed app occupies approximately **13 MB** on disk and its
 ZIP **4 MB**, excluding projects. The macOS CI workflow runs the full suite,
 universal build and signature checks; consult the run for the exact commit
 being reviewed.
 
 The 0.4 app launches locally. Interactive review confirmed the dark welcome
 screen, importing three PDFs together, document tabs, and switching between
-portrait and landscape pages. Other interactive checklist items remain pending.
+portrait and landscape pages. Simple/Advanced switching was checked with an
+existing project: advanced take controls appear and disappear, and Simple export
+retains the current output settings. No recording or audible playback was started.
+Preference migration and preservation of project/export settings are automated.
+Other interactive checklist items remain pending.
 The first launch exposed a hardened-runtime rejection of the ad-hoc signed
 embedded core framework; the app now links that code statically, and CI checks
 that no dynamic core dependency returns. Microphone recording has not been

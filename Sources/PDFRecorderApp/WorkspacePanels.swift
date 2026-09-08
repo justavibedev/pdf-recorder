@@ -50,8 +50,9 @@ import PDFRecorderCore
                         Button("Check Microphone", action: model.startMicrophoneCheck).help("Starts the microphone only when clicked. No audio is saved.")
                     }.disabled(model.mode != .idle)
                     Picker("Countdown", selection: $model.countdownSeconds) { Text("Off").tag(0); Text("3 seconds").tag(3); Text("5 seconds").tag(5) }.disabled(model.mode != .idle)
-                    Toggle("Match volume between pages", isOn: Binding(get: { model.manifest?.matchLoudness == true }, set: { model.setMatchLoudness($0) })).disabled(model.mode != .idle)
+                    if model.advancedUI { Toggle("Match volume between pages", isOn: Binding(get: { model.manifest?.matchLoudness == true }, set: { model.setMatchLoudness($0) })).disabled(model.mode != .idle)
                     Text("Original audio is always preserved.").font(.caption2).foregroundStyle(.secondary)
+                    }
                 }.padding(.top, 8)
             }.font(.caption)
             HStack { Text("Project preview").font(.system(size: 10, weight: .medium)); Spacer(); Text(duration(model.totalDuration)).font(.system(size: 10).monospacedDigit()) }.foregroundStyle(StudioTheme.muted)
@@ -63,9 +64,11 @@ import PDFRecorderCore
 
 @MainActor struct ExportSettingsView: View {
     @ObservedObject var model: AppModel
+    @State private var showOptions = false
     var body: some View {
         VStack(alignment: .leading, spacing: 18) {
             Text("Export presentation").font(.system(size: 21, weight: .semibold))
+            if model.advancedUI || showOptions {
             Picker("Format", selection: $model.exportKind) { ForEach(AppModel.ExportKind.allCases, id: \.self) { Text($0.rawValue).tag($0) } }.pickerStyle(.segmented)
             Picker("Pages", selection: $model.exportScope) { ForEach(ExportScope.allCases) { Text($0.rawValue).tag($0) } }
             if model.exportScope == .range {
@@ -75,6 +78,11 @@ import PDFRecorderCore
             if model.exportScope == .chapter { Text("Uses the nearest heading in “\(model.currentDocument?.title ?? "this PDF")”. Without an outline, the entire PDF is one chapter.").font(.caption).foregroundStyle(.secondary) }
             Toggle("Separate file for every page", isOn: $model.exportSeparately)
             if model.exportKind == .video { Picker("Quality", selection: $model.exportPreset) { ForEach(ExportPreset.allCases) { Text($0.label).tag($0) } } }
+            } else {
+                Text("\(model.exportKind == .video ? "MP4 video" : "M4A audio") · \(model.exportScope.rawValue) · \(model.exportSeparately ? "Separate files" : "One file")")
+                    .font(.callout).foregroundStyle(StudioTheme.muted)
+                Button("Export options…") { showOptions = true }.font(.caption)
+            }
             let included = (try? model.exportSelection().count) ?? 0
             let requested = (try? model.requestedExportPages().count) ?? 0
             let skipped = model.exportScope == .included ? (model.manifest?.pages.count ?? 0) - included : model.exportScope == .document ? model.currentDocumentPages.count - included : requested - included

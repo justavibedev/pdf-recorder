@@ -41,7 +41,7 @@ import PDFRecorderCore
                         .frame(height: max(190, min(380, container.size.height * 0.5))).studioPanel(cornerRadius: 6)
                     Text(recordingHoldsPrompter && prompter.enabled ? "Scrolling resumes with recording" : model.hasUnsavedMetadata ? "Saving changes…" : "Only you see these. Never included in exports.")
                         .font(.system(size: 10)).foregroundStyle(StudioTheme.faint)
-                    DisclosureGroup("Teleprompter", isExpanded: $prompter.enabled) {
+                    if model.advancedUI || prompter.enabled { DisclosureGroup("Teleprompter", isExpanded: $prompter.enabled) {
                         VStack(spacing: 10) {
                             HStack {
                                 Text("Auto-scroll").foregroundStyle(StudioTheme.muted)
@@ -57,6 +57,8 @@ import PDFRecorderCore
                             }.font(.system(size: 10)).foregroundStyle(StudioTheme.muted)
                         }.padding(.top, 10)
                     }.font(.system(size: 12, weight: .medium))
+                    }
+                    if model.advancedUI {
                     DisclosureGroup("Page options", isExpanded: $pageOptions) {
                         VStack(alignment: .leading, spacing: 12) {
                             HStack {
@@ -82,6 +84,7 @@ import PDFRecorderCore
                             Button("Rehearsal Reports…") { model.showRehearsalHistory = true }.buttonStyle(.borderless)
                         }.font(.system(size: 11)).padding(.top, 10)
                     }.font(.system(size: 12, weight: .medium))
+                    }
                 }.padding(14)
             }
         }.onAppear { presenting = model.presenterDisplay.visible }

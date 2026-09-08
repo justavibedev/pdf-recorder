@@ -39,6 +39,7 @@ extension UTType { static let pdfRecorder = UTType(exportedAs: "org.pdfrecorder.
     @Published var showNotes = false { didSet { savePreferences() } }
     @Published var focusMode = false { didSet { savePreferences() } }
     @Published var hideInspector = false { didSet { savePreferences() } }
+    @Published var advancedUI = false { didSet { savePreferences() } }
     @Published var largeControls = false { didSet { savePreferences() } }
     @Published var countdownSeconds = 3 { didSet { savePreferences() } }
     @Published var countdownRemaining = 0

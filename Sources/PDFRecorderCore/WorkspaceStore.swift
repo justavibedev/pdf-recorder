@@ -8,6 +8,8 @@ public struct RecorderPreferences: Codable, Equatable, Sendable {
     public var hidePages = false
     public var hideInspector = false
     public var showNotes = false
+    /// Optional so preferences from earlier releases keep decoding.
+    public var advancedUI: Bool?
     public var largeControls = false
     public init() {}
 }

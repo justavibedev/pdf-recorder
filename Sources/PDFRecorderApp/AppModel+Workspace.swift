@@ -9,6 +9,7 @@ extension AppModel {
         inputID = value.microphoneID; countdownSeconds = [0, 3, 5].contains(value.countdown) ? value.countdown : 3
         playbackRate = min(2, max(0.5, value.playbackRate)); notesFontSize = min(36, max(13, value.notesFontSize))
         focusMode = value.hidePages; hideInspector = value.hideInspector; showNotes = value.showNotes; largeControls = value.largeControls
+        advancedUI = value.advancedUI ?? false
         recentProjects = (try? WorkspaceStore.loadRecent(at: supportRoot)) ?? []; preferencesReady = true
     }
     func savePreferences() {
@@ -16,6 +17,7 @@ extension AppModel {
         var value = RecorderPreferences()
         value.microphoneID = inputID; value.countdown = countdownSeconds; value.playbackRate = playbackRate
         value.notesFontSize = notesFontSize; value.hidePages = focusMode; value.hideInspector = hideInspector
+        value.advancedUI = advancedUI
         value.showNotes = showNotes; value.largeControls = largeControls
         do { try WorkspaceStore.savePreferences(value, at: supportRoot) }
         catch { status = "Preferences could not be saved: \(error.localizedDescription)" }
